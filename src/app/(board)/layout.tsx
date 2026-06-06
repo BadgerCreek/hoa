@@ -1,9 +1,9 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { SignOutButton } from '@/components/SignOutButton'
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -50,12 +50,7 @@ export default async function BoardLayout({ children }: { children: React.ReactN
             <p className="text-xs truncate">{session.user?.name}</p>
             <p className="text-xs text-zinc-400 capitalize">{role?.replace('board_', '')}</p>
           </div>
-          <a
-            href="/api/auth/signout"
-            className="text-xs text-zinc-400 hover:text-zinc-100 transition-colors"
-          >
-            Sign out
-          </a>
+          <SignOutButton />
         </div>
       </aside>
 
