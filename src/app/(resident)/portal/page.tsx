@@ -35,7 +35,7 @@ export default async function ResidentPortalPage() {
         </div>
         <div className="flex items-center gap-4">
           {isBoardMember && (
-            <Link href="/dashboard" className="text-sm text-blue-500 hover:underline">
+            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Board Portal →
             </Link>
           )}
