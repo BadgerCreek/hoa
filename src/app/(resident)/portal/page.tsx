@@ -1,0 +1,101 @@
+import { auth, signOut } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { db } from '@/db'
+import { proposals } from '@/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+
+export default async function ResidentPortalPage() {
+  const session = await auth()
+  if (!session) redirect('/login')
+
+  const openProposals = await db
+    .select()
+    .from(proposals)
+    .where(eq(proposals.status, 'open'))
+    .orderBy(desc(proposals.createdAt))
+    .limit(10)
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="font-semibold">Badger Creek Ranch HOA</h1>
+          <p className="text-xs text-muted-foreground">Resident Portal</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm">{session.user?.name}</span>
+          <form
+            action={async () => {
+              'use server'
+              await signOut({ redirectTo: '/login' })
+            }}
+          >
+            <Button variant="outline" size="sm">Sign out</Button>
+          </form>
+        </div>
+      </header>
+
+      <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+        <div>
+          <h2 className="text-xl font-bold">Welcome back, {session.user?.name?.split(' ')[0]}</h2>
+          <p className="text-sm text-muted-foreground mt-1">Stay up to date with your HOA</p>
+        </div>
+
+        {/* Open proposals for voting */}
+        <section>
+          <h3 className="text-base font-semibold mb-3">Open for Vote</h3>
+          {openProposals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No open proposals at the moment.</p>
+          ) : (
+            <div className="space-y-3">
+              {openProposals.map((proposal) => (
+                <Card key={proposal.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-base">{proposal.title}</CardTitle>
+                      <Badge>Open</Badge>
+                    </div>
+                    {proposal.agentId && (
+                      <CardDescription>Drafted by {proposal.agentId} agent</CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground line-clamp-3">{proposal.content}</p>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" variant="default">Vote Yes</Button>
+                      <Button size="sm" variant="outline">Vote No</Button>
+                      <Button size="sm" variant="ghost">Abstain</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Info section */}
+        <section>
+          <h3 className="text-base font-semibold mb-3">Community Info</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Next Board Meeting</CardTitle>
+                <CardDescription>Date TBD — check back for updates</CardDescription>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Submit an Issue</CardTitle>
+                <CardDescription>Coming soon — maintenance request portal</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
