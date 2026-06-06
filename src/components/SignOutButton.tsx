@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { signOutAction } from '@/app/actions/auth'
 
 export function SignOutButton() {
   const [open, setOpen] = useState(false)
@@ -24,9 +25,9 @@ export function SignOutButton() {
           </DialogHeader>
           <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button asChild>
-              <a href="/api/auth/signout">Sign out</a>
-            </Button>
+            <form action={signOutAction}>
+              <Button type="submit">Sign out</Button>
+            </form>
           </DialogFooter>
         </DialogContent>
       </Dialog>
