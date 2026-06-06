@@ -1,4 +1,4 @@
-import { auth, signOut } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/db'
 import { proposals } from '@/db/schema'
@@ -6,10 +6,17 @@ import { eq, desc } from 'drizzle-orm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { SignOutButton } from '@/components/SignOutButton'
+
+const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 
 export default async function ResidentPortalPage() {
   const session = await auth()
   if (!session) redirect('/login')
+
+  const role = (session.user as { role?: string }).role
+  const isBoardMember = role && BOARD_ROLES.includes(role)
 
   const openProposals = await db
     .select()
@@ -27,15 +34,13 @@ export default async function ResidentPortalPage() {
           <p className="text-xs text-muted-foreground">Resident Portal</p>
         </div>
         <div className="flex items-center gap-4">
+          {isBoardMember && (
+            <Link href="/dashboard" className="text-sm text-blue-500 hover:underline">
+              Board Portal →
+            </Link>
+          )}
           <span className="text-sm">{session.user?.name}</span>
-          <form
-            action={async () => {
-              'use server'
-              await signOut({ redirectTo: '/login' })
-            }}
-          >
-            <Button variant="outline" size="sm">Sign out</Button>
-          </form>
+          <SignOutButton />
         </div>
       </header>
 
@@ -44,6 +49,19 @@ export default async function ResidentPortalPage() {
           <h2 className="text-xl font-bold">Welcome back, {session.user?.name?.split(' ')[0]}</h2>
           <p className="text-sm text-muted-foreground mt-1">Stay up to date with your HOA</p>
         </div>
+
+        {/* Board Members section — visible to all residents */}
+        <section>
+          <h3 className="text-base font-semibold mb-3">Board Members</h3>
+          <Card>
+            <CardContent className="pt-4">
+              <p className="text-sm text-muted-foreground mb-3">Meet your Badger Creek Ranch HOA board.</p>
+              <Link href="/board-members">
+                <Button variant="outline" size="sm">View Board Members</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </section>
 
         {/* Open proposals for voting */}
         <section>
