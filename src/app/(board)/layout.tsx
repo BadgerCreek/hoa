@@ -50,16 +50,12 @@ export default async function BoardLayout({ children }: { children: React.ReactN
             <p className="text-xs truncate">{session.user?.name}</p>
             <p className="text-xs text-zinc-400 capitalize">{role?.replace('board_', '')}</p>
           </div>
-          <form
-            action={async () => {
-              'use server'
-              await signOut({ redirectTo: '/login' })
-            }}
+          <a
+            href="/api/auth/signout"
+            className="text-xs text-zinc-400 hover:text-zinc-100 transition-colors"
           >
-            <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-100 px-2">
-              Out
-            </Button>
-          </form>
+            Sign out
+          </a>
         </div>
       </aside>
 
