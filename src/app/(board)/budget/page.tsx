@@ -1,0 +1,36 @@
+import { db } from '@/db'
+import { budgets, transactions, budgetLineItems } from '@/db/schema'
+import { eq, desc } from 'drizzle-orm'
+import { BudgetView } from '@/components/BudgetView'
+
+export default async function BudgetPage() {
+  const FISCAL_YEAR = 2025 // FY 25/26 (April 1 – March 31)
+
+  const lines = await db.select().from(budgetLineItems)
+    .where(eq(budgetLineItems.fiscalYear, FISCAL_YEAR))
+    .orderBy(budgetLineItems.section, budgetLineItems.sortOrder)
+
+  const currentBudget = await db.query.budgets.findFirst({
+    where: eq(budgets.fiscalYear, new Date().getFullYear()),
+  })
+
+  const txList = currentBudget
+    ? await db.select().from(transactions)
+        .where(eq(transactions.budgetId, currentBudget.id))
+        .orderBy(desc(transactions.date))
+    : []
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Budget</h1>
+        <p className="text-sm text-muted-foreground mt-1">FY: April 1 – March 31 · Click any value to edit</p>
+      </div>
+      <BudgetView
+        initialLines={lines}
+        transactions={txList}
+        fiscalYear={FISCAL_YEAR}
+      />
+    </div>
+  )
+}

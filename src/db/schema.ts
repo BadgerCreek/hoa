@@ -21,7 +21,7 @@ export const users = pgTable('users', {
   email: text('email').unique().notNull(),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
   image: text('image'),
-  // HOA-specific
+  phone: text('phone'),
   role: text('role')
     .$type<'resident' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'admin'>()
     .default('resident'),
@@ -71,6 +71,7 @@ export const properties = pgTable('properties', {
   id: uuid('id').primaryKey().defaultRandom(),
   ownerId: text('owner_id').references(() => users.id),
   address: text('address').notNull(),
+  lotNumber: text('lot_number'),
   unitNumber: text('unit_number'),
   squareFeet: integer('square_feet'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -173,12 +174,127 @@ export const auditLogs = pgTable('audit_logs', {
   timestamp: timestamp('timestamp').defaultNow(),
 })
 
+// ─── Budget Line Items ───────────────────────────────────────────────────────
+
+export const budgetLineItems = pgTable('budget_line_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  fiscalYear: integer('fiscal_year').notNull(), // start year: 2025 = FY 25/26
+  section: text('section').$type<'income' | 'expense' | 'reserves'>().notNull(),
+  description: text('description').notNull(),
+  budgetedAmount: numeric('budgeted_amount', { precision: 10, scale: 2 }),
+  actualAmount: numeric('actual_amount', { precision: 10, scale: 2 }),
+  proposedAmount: numeric('proposed_amount', { precision: 10, scale: 2 }),
+  comment: text('comment'),
+  sortOrder: integer('sort_order').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// ─── Payments ────────────────────────────────────────────────────────────────
+
+export const payments = pgTable('payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  description: text('description'),
+  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  vendor: text('vendor'),
+  category: text('category').$type<'maintenance' | 'utilities' | 'administrative' | 'landscaping' | 'insurance' | 'other'>().default('other'),
+  status: text('status').$type<'pending' | 'approved' | 'rejected'>().default('pending'),
+  requestedBy: text('requested_by').references(() => users.id).notNull(),
+  approvedBy: text('approved_by').references(() => users.id),
+  budgetId: uuid('budget_id').references(() => budgets.id),
+  transactionId: uuid('transaction_id').references(() => transactions.id),
+  rejectionReason: text('rejection_reason'),
+  approvedAt: timestamp('approved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// ─── Dues & Assessments ──────────────────────────────────────────────────────
+
+export const duesAssessments = pgTable('dues_assessments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  propertyId: uuid('property_id').references(() => properties.id, { onDelete: 'cascade' }).notNull(),
+  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
+  dueDate: date('due_date').notNull(),
+  period: text('period').$type<'monthly' | 'quarterly' | 'annual'>().notNull(),
+  status: text('status').$type<'pending' | 'paid' | 'late' | 'waived'>().default('pending'),
+  paidAt: timestamp('paid_at'),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+// ─── Maintenance Requests ────────────────────────────────────────────────────
+
+export const maintenanceRequests = pgTable('maintenance_requests', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  submittedBy: text('submitted_by').references(() => users.id).notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  category: text('category').$type<'plumbing' | 'electrical' | 'landscaping' | 'road' | 'common_area' | 'other'>().default('other'),
+  priority: text('priority').$type<'low' | 'medium' | 'high' | 'urgent'>().default('medium'),
+  status: text('status').$type<'open' | 'in_progress' | 'resolved' | 'closed'>().default('open'),
+  assignedTo: text('assigned_to').references(() => users.id),
+  vendorNotes: text('vendor_notes'),
+  resolvedAt: timestamp('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// ─── Meetings ────────────────────────────────────────────────────────────────
+
+export const meetings = pgTable('meetings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  scheduledAt: timestamp('scheduled_at').notNull(),
+  type: text('type').$type<'board' | 'annual' | 'special'>().default('board'),
+  agenda: text('agenda'),
+  minutesDocId: uuid('minutes_doc_id').references(() => documents.id),
+  status: text('status').$type<'scheduled' | 'completed' | 'cancelled'>().default('scheduled'),
+  createdBy: text('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+// ─── ARC Applications ────────────────────────────────────────────────────────
+
+export const arcApplications = pgTable('arc_applications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  propertyId: uuid('property_id').references(() => properties.id),
+  applicantId: text('applicant_id').references(() => users.id).notNull(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  status: text('status')
+    .$type<'submitted' | 'under_review' | 'approved' | 'rejected' | 'needs_info'>()
+    .default('submitted'),
+  agentSummary: text('agent_summary'),
+  decision: text('decision'),
+  decidedBy: text('decided_by').references(() => users.id),
+  submittedAt: timestamp('submitted_at').defaultNow(),
+  decidedAt: timestamp('decided_at'),
+})
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  type: text('type')
+    .$type<'dues_reminder' | 'task_update' | 'proposal_update' | 'maintenance_update' | 'arc_update'>()
+    .notNull(),
+  message: text('message').notNull(),
+  read: boolean('read').default(false),
+  link: text('link'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
 // ─── Relations ───────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many }) => ({
   properties: many(properties),
   tasks: many(tasks),
   boardMemberships: many(boardMembers),
+  maintenanceRequests: many(maintenanceRequests),
+  notifications: many(notifications),
 }))
 
 export const budgetsRelations = relations(budgets, ({ many }) => ({
@@ -196,4 +312,34 @@ export const proposalsRelations = relations(proposals, ({ many }) => ({
 export const votesRelations = relations(votes, ({ one }) => ({
   proposal: one(proposals, { fields: [votes.proposalId], references: [proposals.id] }),
   voter: one(users, { fields: [votes.voterId], references: [users.id] }),
+}))
+
+export const propertiesRelations = relations(properties, ({ one, many }) => ({
+  owner: one(users, { fields: [properties.ownerId], references: [users.id] }),
+  duesAssessments: many(duesAssessments),
+  arcApplications: many(arcApplications),
+}))
+
+export const duesAssessmentsRelations = relations(duesAssessments, ({ one }) => ({
+  property: one(properties, { fields: [duesAssessments.propertyId], references: [properties.id] }),
+}))
+
+export const maintenanceRequestsRelations = relations(maintenanceRequests, ({ one }) => ({
+  submitter: one(users, { fields: [maintenanceRequests.submittedBy], references: [users.id] }),
+}))
+
+export const arcApplicationsRelations = relations(arcApplications, ({ one }) => ({
+  property: one(properties, { fields: [arcApplications.propertyId], references: [properties.id] }),
+  applicant: one(users, { fields: [arcApplications.applicantId], references: [users.id] }),
+}))
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, { fields: [notifications.userId], references: [users.id] }),
+}))
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  requester: one(users, { fields: [payments.requestedBy], references: [users.id] }),
+  approver: one(users, { fields: [payments.approvedBy], references: [users.id] }),
+  budget: one(budgets, { fields: [payments.budgetId], references: [budgets.id] }),
+  transaction: one(transactions, { fields: [payments.transactionId], references: [transactions.id] }),
 }))

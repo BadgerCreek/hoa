@@ -1,14 +1,11 @@
-import { createOpenAI } from '@ai-sdk/openai'
+import { createAnthropic } from '@ai-sdk/anthropic'
 
-// Venice is OpenAI-compatible — no native SDK provider exists
-export const veniceProvider = createOpenAI({
-  baseURL: 'https://api.venice.ai/api/v1',
-  apiKey: process.env.VENICE_API_KEY,
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
-// Model tiers — match to task complexity
 export const VeniceModel = {
-  fast: veniceProvider('llama-3.3-70b'),           // routine analysis, summaries
-  smart: veniceProvider('qwen-2.5-vl'),             // complex proposals, reasoning
-  deep: veniceProvider('deepseek-r1-671b'),          // financial forecasting, legal review
+  fast: anthropic('claude-haiku-4-5-20251001'),
+  smart: anthropic('claude-sonnet-4-6'),
+  deep: anthropic('claude-opus-4-8'),
 } as const

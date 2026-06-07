@@ -1,13 +1,14 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { db } from '@/db'
-import { proposals } from '@/db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { proposals, votes } from '@/db/schema'
+import { eq, desc, inArray } from 'drizzle-orm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { SignOutButton } from '@/components/SignOutButton'
+import { VoteButtons } from '@/components/VoteButtons'
 
 const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 
@@ -25,9 +26,27 @@ export default async function ResidentPortalPage() {
     .orderBy(desc(proposals.createdAt))
     .limit(10)
 
+  const proposalIds = openProposals.map(p => p.id)
+  const allVotes = proposalIds.length > 0
+    ? await db.select().from(votes).where(inArray(votes.proposalId, proposalIds))
+    : []
+
+  function getTally(proposalId: string) {
+    const pvotes = allVotes.filter(v => v.proposalId === proposalId)
+    return {
+      yes: pvotes.filter(v => v.vote === 'yes').length,
+      no: pvotes.filter(v => v.vote === 'no').length,
+      abstain: pvotes.filter(v => v.vote === 'abstain').length,
+    }
+  }
+
+  function getUserVote(proposalId: string) {
+    const userId = session?.user?.id
+    return (allVotes.find(v => v.proposalId === proposalId && v.voterId === userId)?.vote ?? null) as 'yes' | 'no' | 'abstain' | null
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="font-semibold">Badger Creek Ranch HOA</h1>
@@ -50,7 +69,6 @@ export default async function ResidentPortalPage() {
           <p className="text-sm text-muted-foreground mt-1">Stay up to date with your HOA</p>
         </div>
 
-        {/* Board Members section — visible to all residents */}
         <section>
           <h3 className="text-base font-semibold mb-3">Board Members</h3>
           <Card>
@@ -63,7 +81,6 @@ export default async function ResidentPortalPage() {
           </Card>
         </section>
 
-        {/* Open proposals for voting */}
         <section>
           <h3 className="text-base font-semibold mb-3">Open for Vote</h3>
           {openProposals.length === 0 ? (
@@ -81,13 +98,13 @@ export default async function ResidentPortalPage() {
                       <CardDescription>Drafted by {proposal.agentId} agent</CardDescription>
                     )}
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground line-clamp-3">{proposal.content}</p>
-                    <div className="flex gap-2 mt-3">
-                      <Button size="sm" variant="default">Vote Yes</Button>
-                      <Button size="sm" variant="outline">Vote No</Button>
-                      <Button size="sm" variant="ghost">Abstain</Button>
-                    </div>
+                    <VoteButtons
+                      proposalId={proposal.id}
+                      initialVote={getUserVote(proposal.id)}
+                      initialTally={getTally(proposal.id)}
+                    />
                   </CardContent>
                 </Card>
               ))}
@@ -95,7 +112,6 @@ export default async function ResidentPortalPage() {
           )}
         </section>
 
-        {/* Info section */}
         <section>
           <h3 className="text-base font-semibold mb-3">Community Info</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

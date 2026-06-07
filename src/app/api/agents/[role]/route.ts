@@ -1,10 +1,11 @@
 import { streamText, stepCountIs, convertToModelMessages } from 'ai'
 import { auth } from '@/lib/auth'
 import { agentPrompts, type AgentRole } from '@/lib/agents/prompts'
-import { agentTools } from '@/lib/agents/tools'
+import { agentToolsets, createUpdateMemoryTool } from '@/lib/agents/tools'
 import { VeniceModel } from '@/lib/venice'
 import { db } from '@/db'
-import { auditLogs } from '@/db/schema'
+import { auditLogs, agentMemory } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 
 const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 const VALID_AGENT_ROLES = ['president', 'vp', 'secretary', 'treasurer'] as const
@@ -29,6 +30,14 @@ export async function POST(
 
   const { messages } = await req.json()
 
+  // Load persistent memory for this agent role
+  const memory = await db.query.agentMemory.findFirst({
+    where: eq(agentMemory.agentRole, role),
+  })
+  const memorySection = memory?.context
+    ? `\n\n## Your Persistent Memory\nFacts saved from previous sessions:\n${JSON.stringify(memory.context, null, 2)}\nUse updateAgentMemory to add or update facts.`
+    : `\n\n## Your Persistent Memory\nNo saved memories yet. Use updateAgentMemory to save important facts across sessions.`
+
   await db.insert(auditLogs).values({
     action: 'agent.invoked',
     entityType: 'agent',
@@ -36,11 +45,16 @@ export async function POST(
     details: { agentRole: role, messageCount: messages.length },
   })
 
+  const tools = {
+    ...agentToolsets[role as AgentRole],
+    updateAgentMemory: createUpdateMemoryTool(role),
+  }
+
   const result = streamText({
-    model: VeniceModel.smart,
-    system: agentPrompts[role as AgentRole],
+    model: VeniceModel.fast,
+    system: agentPrompts[role as AgentRole] + memorySection,
     messages: await convertToModelMessages(messages),
-    tools: agentTools,
+    tools,
     stopWhen: stepCountIs(5),
     temperature: 0.3,
   })

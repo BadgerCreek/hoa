@@ -1,19 +1,24 @@
 import { db } from '@/db'
 import { proposals, votes } from '@/db/schema'
-import { desc, eq, count } from 'drizzle-orm'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-
-const statusColor: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  draft: 'secondary',
-  open: 'default',
-  closed: 'secondary',
-  approved: 'default',
-  rejected: 'destructive',
-}
+import { desc, inArray } from 'drizzle-orm'
+import { EditProposalCard } from '@/components/EditProposalCard'
 
 export default async function ProposalsPage() {
   const allProposals = await db.select().from(proposals).orderBy(desc(proposals.createdAt)).limit(50)
+
+  const proposalIds = allProposals.map(p => p.id)
+  const allVotes = proposalIds.length > 0
+    ? await db.select().from(votes).where(inArray(votes.proposalId, proposalIds))
+    : []
+
+  function getTally(proposalId: string) {
+    const pvotes = allVotes.filter(v => v.proposalId === proposalId)
+    return {
+      yes: pvotes.filter(v => v.vote === 'yes').length,
+      no: pvotes.filter(v => v.vote === 'no').length,
+      abstain: pvotes.filter(v => v.vote === 'abstain').length,
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -23,22 +28,11 @@ export default async function ProposalsPage() {
       ) : (
         <div className="space-y-4">
           {allProposals.map((proposal) => (
-            <Card key={proposal.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-4">
-                  <CardTitle className="text-base font-medium">{proposal.title}</CardTitle>
-                  <Badge variant={statusColor[proposal.status ?? 'draft']}>
-                    {proposal.status}
-                  </Badge>
-                </div>
-                {proposal.agentId && (
-                  <CardDescription>Drafted by {proposal.agentId} agent</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{proposal.content}</p>
-              </CardContent>
-            </Card>
+            <EditProposalCard
+              key={proposal.id}
+              proposal={proposal}
+              tally={getTally(proposal.id)}
+            />
           ))}
         </div>
       )}
