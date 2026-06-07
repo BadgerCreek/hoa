@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 
 type Section = 'income' | 'expense' | 'reserves'
 
@@ -115,14 +116,19 @@ export function BudgetView({
   transactions,
   fiscalYear,
   isAdmin,
+  canApprove,
 }: {
   initialLines: BudgetLine[]
   transactions: Transaction[]
   fiscalYear: number
   isAdmin: boolean
+  canApprove: boolean
 }) {
   const [lines, setLines] = useState<BudgetLine[]>(initialLines)
   const [seeding, setSeeding] = useState(false)
+  const [approveOpen, setApproveOpen] = useState(false)
+  const [approving, setApproving] = useState(false)
+  const [approveResult, setApproveResult] = useState<string | null>(null)
 
   // ─── Data helpers ─────────────────────────────────────────────────────
 
@@ -176,6 +182,22 @@ export function BudgetView({
     const resp = await fetch(`/api/budget-lines?year=${fiscalYear}`)
     setLines(await resp.json())
     setSeeding(false)
+  }
+
+  async function approveBudget() {
+    setApproving(true)
+    const resp = await fetch('/api/budget-lines/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromYear: fiscalYear, toYear: fiscalYear + 1 }),
+    })
+    const data = await resp.json()
+    setApproving(false)
+    if (resp.ok) {
+      setApproveResult(`FY ${fyLabel(fiscalYear + 1)} budget approved — ${data.linesCreated} line items created.`)
+    } else {
+      setApproveResult(`Error: ${data.error ?? 'Something went wrong'}`)
+    }
   }
 
   // ─── Section renderer ─────────────────────────────────────────────────
@@ -287,6 +309,51 @@ export function BudgetView({
   // ─── Render ───────────────────────────────────────────────────────────
 
   return (
+    <>
+    <Dialog open={approveOpen} onOpenChange={open => { setApproveOpen(open); if (!open) setApproveResult(null) }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Approve {fyLabel(fiscalYear + 1)} Budget</DialogTitle>
+          <DialogDescription>
+            This will create the {fyLabel(fiscalYear + 1)} budget using the proposed amounts below.
+            This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        {!approveResult ? (
+          <div className="space-y-3 py-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Income</span>
+              <span className="font-mono font-semibold">{fmt(totalProposed('income'))}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Expenses</span>
+              <span className="font-mono font-semibold">{fmt(totalProposed('expense'))}</span>
+            </div>
+            <div className="flex justify-between border-t pt-2">
+              <span className="font-semibold">Surplus / (Deficit)</span>
+              <span className={`font-mono font-bold ${surplusProposed >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                {fmt(surplusProposed)}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <p className="py-2 text-sm">{approveResult}</p>
+        )}
+        <DialogFooter>
+          {!approveResult ? (
+            <>
+              <Button variant="outline" onClick={() => setApproveOpen(false)}>Cancel</Button>
+              <Button onClick={approveBudget} disabled={approving}>
+                {approving ? 'Approving…' : `Approve ${fyLabel(fiscalYear + 1)} Budget`}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => { setApproveOpen(false); setApproveResult(null) }}>Done</Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <Tabs defaultValue="actual" className="space-y-6">
       <div className="flex items-center justify-between">
         <TabsList>
@@ -370,6 +437,13 @@ export function BudgetView({
 
       {/* ── Proposed ── */}
       <TabsContent value="proposed" className="mt-0">
+        {canApprove && (
+          <div className="flex justify-end mb-3">
+            <Button size="sm" onClick={() => setApproveOpen(true)}>
+              Approve {fyLabel(fiscalYear + 1)} Budget
+            </Button>
+          </div>
+        )}
         <div className="rounded-lg border overflow-hidden">
           <table className="w-full">
             <thead>
@@ -470,5 +544,6 @@ export function BudgetView({
         )}
       </TabsContent>
     </Tabs>
+    </>
   )
 }

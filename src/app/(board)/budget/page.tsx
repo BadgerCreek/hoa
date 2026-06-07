@@ -9,6 +9,11 @@ export default async function BudgetPage() {
   const isAdmin = checkAdmin(session?.user?.role, session?.user?.isAdmin)
   const FISCAL_YEAR = 2025 // FY 25/26 (April 1 – March 31)
 
+  const BOARD_ROLES = new Set([
+    'board_president', 'board_vp', 'board_secretary', 'board_treasurer',
+  ])
+  const canApprove = isAdmin || BOARD_ROLES.has(session?.user?.role ?? '')
+
   const lines = await db.select().from(budgetLineItems)
     .where(eq(budgetLineItems.fiscalYear, FISCAL_YEAR))
     .orderBy(budgetLineItems.section, budgetLineItems.sortOrder)
@@ -34,6 +39,7 @@ export default async function BudgetPage() {
         transactions={txList}
         fiscalYear={FISCAL_YEAR}
         isAdmin={isAdmin}
+        canApprove={canApprove}
       />
     </div>
   )
