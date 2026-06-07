@@ -57,10 +57,10 @@ export function MagicLinkForm() {
         onChange={e => setEmail(e.target.value)}
         disabled={loading}
         autoComplete="email"
-        className="bg-white/70"
+        className="bg-zinc-800/80 border-zinc-700 text-white placeholder:text-zinc-400 h-11"
       />
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <Button type="submit" variant="outline" className="w-full" disabled={loading || !email.trim()}>
+      <Button type="submit" variant="outline" className="w-full h-11 border-zinc-700 bg-zinc-800/80 text-white hover:bg-zinc-700 hover:text-white" disabled={loading || !email.trim()}>
         {loading ? 'Sending…' : 'Send magic link'}
       </Button>
     </form>
