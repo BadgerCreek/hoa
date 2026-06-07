@@ -54,13 +54,17 @@ interface DuesInfo {
   status: string | null
 }
 
-const empty = { name: '', email: '', phone: '', role: 'resident' as Role, lotNumber: '', address: '' }
+interface FormState {
+  name: string; email: string; phone: string; role: Role
+  lotNumber: string; address: string; duesStatus: string
+}
+const empty: FormState = { name: '', email: '', phone: '', role: 'resident', lotNumber: '', address: '', duesStatus: '' }
 
 export function MemberTable({ members, duesByMember }: { members: Member[]; duesByMember: Record<string, string | null> }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Member | null>(null)
-  const [form, setForm] = useState(empty)
+  const [form, setForm] = useState<FormState>(empty)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<Member | null>(null)
@@ -82,12 +86,13 @@ export function MemberTable({ members, duesByMember }: { members: Member[]; dues
       role: (m.role ?? 'resident') as Role,
       lotNumber: m.lotNumber ?? '',
       address: m.address ?? '',
+      duesStatus: (duesByMember[m.id] ?? '') as string,
     })
     setError('')
     setOpen(true)
   }
 
-  function field(key: keyof typeof form, value: string) {
+  function field(key: keyof FormState, value: string) {
     setForm(f => ({ ...f, [key]: value }))
   }
 
@@ -106,6 +111,7 @@ export function MemberTable({ members, duesByMember }: { members: Member[]; dues
       role: form.role,
       lotNumber: form.lotNumber || undefined,
       address: form.address || undefined,
+      duesStatus: form.duesStatus || undefined,
     }
 
     const resp = editing
@@ -238,6 +244,20 @@ export function MemberTable({ members, duesByMember }: { members: Member[]; dues
                 <Input value={form.address} onChange={e => field('address', e.target.value)} placeholder="123 Ranch Rd" />
               </div>
             </div>
+            {editing && (
+              <div className="space-y-1.5">
+                <Label>Dues Status</Label>
+                <Select value={form.duesStatus} onValueChange={v => field('duesStatus', v ?? '')}>
+                  <SelectTrigger><SelectValue placeholder="No change" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="pending">Not Paid (Pending)</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
+                    <SelectItem value="waived">Waived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
           <DialogFooter>

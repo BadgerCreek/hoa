@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/db'
-import { users, properties, auditLogs } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { users, properties, auditLogs, duesAssessments } from '@/db/schema'
+import { eq, desc } from 'drizzle-orm'
 import { z } from 'zod'
 
 const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
@@ -13,6 +13,7 @@ const patchSchema = z.object({
   role: z.enum(['resident', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']).optional(),
   lotNumber: z.string().optional(),
   address: z.string().optional(),
+  duesStatus: z.enum(['pending', 'paid', 'late', 'waived']).optional(),
 })
 
 export async function PATCH(
@@ -31,23 +32,49 @@ export async function PATCH(
   const parsed = patchSchema.safeParse(await req.json())
   if (!parsed.success) return new Response('Invalid data', { status: 400 })
 
-  const { lotNumber, address, ...userFields } = parsed.data
+  const { lotNumber, address, duesStatus, ...userFields } = parsed.data
 
   if (Object.keys(userFields).length > 0) {
     await db.update(users).set(userFields).where(eq(users.id, id))
   }
 
   // Upsert property if lot/address provided
+  let property = await db.query.properties.findFirst({ where: eq(properties.ownerId, id) })
   if (lotNumber !== undefined || address !== undefined) {
-    const existing = await db.query.properties.findFirst({
-      where: eq(properties.ownerId, id),
-    })
-    if (existing) {
+    if (property) {
       await db.update(properties)
         .set({ ...(lotNumber !== undefined && { lotNumber }), ...(address !== undefined && { address }) })
         .where(eq(properties.ownerId, id))
-    } else if (address) {
-      await db.insert(properties).values({ ownerId: id, address, lotNumber })
+    } else {
+      // Create property even with just a lot number
+      const [created] = await db.insert(properties).values({
+        ownerId: id,
+        address: address ?? '',
+        lotNumber,
+      }).returning()
+      property = created
+    }
+  }
+
+  // Update or create dues assessment
+  if (duesStatus && property) {
+    const existing = await db.query.duesAssessments.findFirst({
+      where: eq(duesAssessments.propertyId, property.id),
+      orderBy: desc(duesAssessments.dueDate),
+    })
+    if (existing) {
+      await db.update(duesAssessments)
+        .set({ status: duesStatus, ...(duesStatus === 'paid' && { paidAt: new Date() }) })
+        .where(eq(duesAssessments.id, existing.id))
+    } else {
+      await db.insert(duesAssessments).values({
+        propertyId: property.id,
+        amount: '0',
+        dueDate: new Date().toISOString().split('T')[0],
+        period: 'annual',
+        status: duesStatus,
+        ...(duesStatus === 'paid' && { paidAt: new Date() }),
+      })
     }
   }
 
