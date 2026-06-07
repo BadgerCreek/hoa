@@ -10,8 +10,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
-  const { id } = await params
-
   if (!session?.user) return new Response('Unauthorized', { status: 401 })
 
   const userRole = (session.user as { role?: string }).role
@@ -19,27 +17,23 @@ export async function POST(
     return new Response('Forbidden', { status: 403 })
   }
 
-  const { action, notes } = await req.json() as { action: 'approve' | 'reject'; notes?: string }
+  const { id } = await params
 
   const [updated] = await db
     .update(tasks)
-    .set({
-      status: action === 'approve' ? 'approved' : 'rejected',
-      completedBy: action === 'approve' ? null : session.user.id,
-      updatedAt: new Date(),
-    })
+    .set({ status: 'completed', completedBy: session.user.id, updatedAt: new Date() })
     .where(eq(tasks.id, id))
     .returning()
 
-  if (!updated) return new Response('Task not found', { status: 404 })
+  if (!updated) return new Response('Not found', { status: 404 })
 
   await db.insert(auditLogs).values({
-    action: `task.${action}d`,
+    action: 'task.completed',
     entityType: 'task',
     entityId: id,
     performedBy: session.user.id!,
-    details: { notes },
+    details: { title: updated.title },
   })
 
-  return Response.json({ ok: true, task: updated })
+  return Response.json({ ok: true })
 }

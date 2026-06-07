@@ -105,7 +105,7 @@ export const tasks = pgTable('tasks', {
   title: text('title').notNull(),
   description: text('description'),
   status: text('status')
-    .$type<'pending' | 'in_progress' | 'awaiting_human' | 'completed' | 'rejected'>()
+    .$type<'pending' | 'in_progress' | 'awaiting_human' | 'approved' | 'completed' | 'rejected'>()
     .default('pending'),
   assignedToUserId: text('assigned_to_user_id').references(() => users.id),
   assignedToAgentRole: text('assigned_to_agent_role'), // 'treasurer' | 'president' | etc.
