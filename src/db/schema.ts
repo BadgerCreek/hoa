@@ -107,6 +107,9 @@ export const tasks = pgTable('tasks', {
   status: text('status')
     .$type<'pending' | 'in_progress' | 'awaiting_human' | 'approved' | 'completed' | 'rejected'>()
     .default('pending'),
+  type: text('type')
+    .$type<'notification' | 'schedule_meeting' | 'phone_call' | 'get_quote' | 'request_payment' | 'request_invoice' | 'general'>()
+    .default('general'),
   assignedToUserId: text('assigned_to_user_id').references(() => users.id),
   assignedToAgentRole: text('assigned_to_agent_role'),
   meetingId: uuid('meeting_id'), // 'treasurer' | 'president' | etc.
@@ -309,7 +312,7 @@ export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
   type: text('type')
-    .$type<'dues_reminder' | 'task_update' | 'proposal_update' | 'maintenance_update' | 'arc_update'>()
+    .$type<'dues_reminder' | 'task_update' | 'proposal_update' | 'maintenance_update' | 'arc_update' | 'hoa_notice'>()
     .notNull(),
   message: text('message').notNull(),
   read: boolean('read').default(false),

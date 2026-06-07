@@ -13,6 +13,7 @@ interface Task {
   description: string | null
   agentThoughts: string | null
   status: string | null
+  type: string | null
   createdByAgent: string | null
 }
 

@@ -83,6 +83,9 @@ const getDocumentsTool = tool({
 
 // ─── Write Tools ──────────────────────────────────────────────────────────────
 
+const TASK_TYPES = ['notification', 'schedule_meeting', 'phone_call', 'get_quote', 'request_payment', 'request_invoice', 'general'] as const
+type TaskType = typeof TASK_TYPES[number]
+
 const createTaskTool = tool({
   description: 'Create a task that requires human review before execution',
   inputSchema: zodSchema(z.object({
@@ -90,16 +93,18 @@ const createTaskTool = tool({
     description: z.string(),
     agentThoughts: z.string().describe('Step-by-step reasoning that led to this task'),
     assignedToAgentRole: z.string().optional(),
+    type: z.enum(TASK_TYPES).optional().describe('Task category: notification (draft message to residents), schedule_meeting, phone_call, get_quote, request_payment, request_invoice, general'),
   })),
   execute: async (
-    { title, description, agentThoughts, assignedToAgentRole }: {
-      title: string; description: string; agentThoughts: string; assignedToAgentRole?: string
+    { title, description, agentThoughts, assignedToAgentRole, type }: {
+      title: string; description: string; agentThoughts: string; assignedToAgentRole?: string; type?: TaskType
     }
   ) => {
     const [task] = await db.insert(tasks).values({
       title,
       description,
       status: 'awaiting_human',
+      type: type ?? 'general',
       agentThoughts,
       assignedToAgentRole,
       createdByAgent: assignedToAgentRole ?? 'agent',

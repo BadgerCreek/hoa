@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 
 type TaskStatus = 'pending' | 'in_progress' | 'awaiting_human' | 'approved' | 'completed' | 'rejected'
+type TaskType = 'notification' | 'schedule_meeting' | 'phone_call' | 'get_quote' | 'request_payment' | 'request_invoice' | 'general'
 
 const statusColor: Record<TaskStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending: 'secondary',
@@ -27,16 +28,24 @@ const statusLabel: Record<TaskStatus, string> = {
   rejected: 'Rejected',
 }
 
-type TaskType = 'schedule' | 'follow_up' | 'payment' | 'general'
+const typeLabel: Record<TaskType, string> = {
+  notification:     'Notification',
+  schedule_meeting: 'Schedule Meeting',
+  phone_call:       'Phone Call',
+  get_quote:        'Get Quote',
+  request_payment:  'Request Payment',
+  request_invoice:  'Request Invoice',
+  general:          'General',
+}
 
-function detectType(title: string, description: string | null): TaskType {
+// Legacy regex fallback for tasks created before the type column existed
+function legacyDetectType(title: string, description: string | null): TaskType {
   const t = title.toLowerCase()
   const full = `${t} ${(description ?? '').toLowerCase()}`
-  // Schedule: only match title — descriptions often contain "meeting" as context noise
-  if (/\bschedule\b.*\bmeet|\bset.?up\b.*\bmeet|\bbook\b.*\bmeet|\borganize\b.*\bmeet/.test(t)) return 'schedule'
-  if (/\bschedule\b (a |the |next )?meeting/.test(t)) return 'schedule'
-  if (/\bemail\b|\bfollow.?up\b|\bcontact\b|\bnotif|\breach out\b|\bdraft\b/.test(full)) return 'follow_up'
-  if (/\bpay\b|\bpayment\b|\binvoice\b|\bbid\b/.test(full)) return 'payment'
+  if (/\bschedule\b.*\bmeet|\bset.?up\b.*\bmeet|\bbook\b.*\bmeet|\borganize\b.*\bmeet/.test(t)) return 'schedule_meeting'
+  if (/\bschedule\b (a |the |next )?meeting/.test(t)) return 'schedule_meeting'
+  if (/\bemail\b|\bfollow.?up\b|\bcontact\b|\bnotif|\breach out\b|\bdraft\b/.test(full)) return 'notification'
+  if (/\bpay\b|\bpayment\b|\binvoice\b|\bbid\b/.test(full)) return 'request_payment'
   return 'general'
 }
 
@@ -56,6 +65,7 @@ interface Props {
     description: string | null
     agentThoughts: string | null
     status: string | null
+    type: string | null
     createdByAgent: string | null
   }
 }
@@ -67,12 +77,18 @@ export function EditTaskCard({ task }: Props) {
   const [description, setDescription] = useState(task.description ?? '')
   const [saving, setSaving] = useState(false)
   const [acting, setActing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState('')
   const [emailDraft, setEmailDraft] = useState<{ subject: string; body: string } | null>(null)
   const [draftLoading, setDraftLoading] = useState(false)
+  const [notifResult, setNotifResult] = useState<{ sent: number; total: number } | null>(null)
+  const [sendingNotif, setSendingNotif] = useState(false)
 
   const status = (task.status ?? 'pending') as TaskStatus
-  const taskType = detectType(task.title, task.description)
+  const taskType: TaskType = (task.type && task.type !== 'general')
+    ? task.type as TaskType
+    : legacyDetectType(task.title, task.description)
 
   async function approve() {
     setActing(true)
@@ -103,12 +119,30 @@ export function EditTaskCard({ task }: Props) {
     router.refresh()
   }
 
+  async function deleteTask() {
+    setDeleting(true)
+    await fetch(`/api/tasks/${task.id}`, { method: 'DELETE' })
+    setDeleting(false)
+    router.refresh()
+  }
+
   async function draftEmail() {
     setDraftLoading(true)
     const resp = await fetch(`/api/tasks/${task.id}/draft-email`, { method: 'POST' })
     const data = await resp.json()
     setEmailDraft(data)
     setDraftLoading(false)
+  }
+
+  async function sendNotification() {
+    setSendingNotif(true)
+    const resp = await fetch(`/api/tasks/${task.id}/send-notification`, { method: 'POST' })
+    const data = await resp.json()
+    setSendingNotif(false)
+    if (resp.ok) {
+      setNotifResult({ sent: data.sent, total: data.total })
+      router.refresh()
+    }
   }
 
   async function save() {
@@ -140,10 +174,32 @@ export function EditTaskCard({ task }: Props) {
             ) : (
               <CardTitle className="text-base font-medium">{title}</CardTitle>
             )}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+              {taskType !== 'general' && (
+                <Badge variant="secondary" className="text-xs">{typeLabel[taskType]}</Badge>
+              )}
               <Badge variant={statusColor[status]}>{statusLabel[status]}</Badge>
               {!editing && status !== 'completed' && (
                 <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
+              )}
+              {!confirmDelete ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={deleting}
+                >
+                  Delete
+                </Button>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-muted-foreground">Sure?</span>
+                  <Button size="sm" variant="destructive" onClick={deleteTask} disabled={deleting}>
+                    {deleting ? '…' : 'Yes'}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>No</Button>
+                </div>
               )}
             </div>
           </div>
@@ -159,7 +215,7 @@ export function EditTaskCard({ task }: Props) {
                 className="w-full rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[80px] resize-y"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
-                placeholder="Description (optional)"
+                placeholder={taskType === 'notification' ? 'Write the message to send to residents…' : 'Description (optional)'}
               />
               {error && <p className="text-xs text-destructive">{error}</p>}
               <div className="flex gap-2 flex-wrap">
@@ -167,9 +223,7 @@ export function EditTaskCard({ task }: Props) {
                   {saving ? 'Saving…' : 'Save'}
                 </Button>
                 {status === 'rejected' && (
-                  <Button size="sm" variant="outline" onClick={approve} disabled={acting}>
-                    Re-approve
-                  </Button>
+                  <Button size="sm" variant="outline" onClick={approve} disabled={acting}>Re-approve</Button>
                 )}
                 <Button size="sm" variant="ghost" onClick={() => { setTitle(task.title); setDescription(task.description ?? ''); setEditing(false) }} disabled={saving}>
                   Cancel
@@ -189,7 +243,6 @@ export function EditTaskCard({ task }: Props) {
                 </details>
               )}
 
-              {/* Awaiting approval — show Approve / Reject */}
               {status === 'awaiting_human' && (
                 <div className="flex gap-2 flex-wrap">
                   <Button size="sm" onClick={approve} disabled={acting}>Approve Task</Button>
@@ -197,22 +250,29 @@ export function EditTaskCard({ task }: Props) {
                 </div>
               )}
 
-              {/* Approved — show Mark Done + smart actions */}
               {status === 'approved' && (
                 <div className="flex gap-2 flex-wrap items-center">
                   <Button size="sm" onClick={markDone} disabled={acting}>Mark Done</Button>
 
-                  {taskType === 'schedule' && (
-                    <a
-                      href={googleCalendarUrl(task.title, task.description)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                  {taskType === 'schedule_meeting' && (
+                    <a href={googleCalendarUrl(task.title, task.description)} target="_blank" rel="noopener noreferrer">
                       <Button size="sm" variant="outline">+ Google Calendar</Button>
                     </a>
                   )}
 
-                  {taskType === 'follow_up' && (
+                  {taskType === 'notification' && !notifResult && (
+                    <Button size="sm" variant="outline" onClick={sendNotification} disabled={sendingNotif}>
+                      {sendingNotif ? 'Sending…' : '📢 Send to Residents'}
+                    </Button>
+                  )}
+
+                  {notifResult && (
+                    <p className="text-xs text-muted-foreground">
+                      Sent to {notifResult.sent}/{notifResult.total} residents
+                    </p>
+                  )}
+
+                  {taskType === 'phone_call' && (
                     <Button size="sm" variant="outline" onClick={draftEmail} disabled={draftLoading}>
                       {draftLoading ? 'Drafting…' : '✉ Draft Email'}
                     </Button>
@@ -224,7 +284,6 @@ export function EditTaskCard({ task }: Props) {
         </CardContent>
       </Card>
 
-      {/* Email draft modal */}
       <Dialog open={!!emailDraft} onOpenChange={() => setEmailDraft(null)}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>

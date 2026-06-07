@@ -2,13 +2,17 @@ import { db } from '@/db'
 import { tasks } from '@/db/schema'
 import { desc } from 'drizzle-orm'
 import { EditTaskCard } from '@/components/EditTaskCard'
+import { AddTaskDialog } from '@/components/AddTaskDialog'
 
 export default async function TasksPage() {
   const allTasks = await db.select().from(tasks).orderBy(desc(tasks.createdAt)).limit(50)
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Tasks</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Tasks</h1>
+        <AddTaskDialog />
+      </div>
       {allTasks.length === 0 ? (
         <p className="text-muted-foreground">No tasks yet. Agents will create tasks when they need your approval.</p>
       ) : (
