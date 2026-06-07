@@ -45,3 +45,31 @@ export async function PATCH(
 
   return Response.json({ ok: true, proposal: updated })
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth()
+  if (!session?.user) return new Response('Unauthorized', { status: 401 })
+
+  const userRole = (session.user as { role?: string }).role
+  if (!userRole || !BOARD_ROLES.includes(userRole)) {
+    return new Response('Forbidden', { status: 403 })
+  }
+
+  const { id } = await params
+
+  const [deleted] = await db.delete(proposals).where(eq(proposals.id, id)).returning()
+  if (!deleted) return new Response('Not found', { status: 404 })
+
+  await db.insert(auditLogs).values({
+    action: 'proposal.deleted',
+    entityType: 'proposal',
+    entityId: id,
+    performedBy: session.user.id!,
+    details: { title: deleted.title },
+  })
+
+  return Response.json({ ok: true })
+}

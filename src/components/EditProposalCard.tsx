@@ -35,6 +35,8 @@ export function EditProposalCard({ proposal, tally }: Props) {
   const [content, setContent] = useState(proposal.content)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const status = (proposal.status ?? 'draft') as Status
   const totalVotes = tally.yes + tally.no + tally.abstain
@@ -53,6 +55,13 @@ export function EditProposalCard({ proposal, tally }: Props) {
       return
     }
     setEditing(false)
+    router.refresh()
+  }
+
+  async function deleteProposal() {
+    setDeleting(true)
+    await fetch(`/api/proposals/${proposal.id}`, { method: 'DELETE' })
+    setDeleting(false)
     router.refresh()
   }
 
@@ -77,12 +86,29 @@ export function EditProposalCard({ proposal, tally }: Props) {
           ) : (
             <CardTitle className="text-base font-medium">{title}</CardTitle>
           )}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
             <Badge variant={statusColor[status]}>{status}</Badge>
             {!editing && (
-              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-                Edit
+              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
+            )}
+            {!confirmDelete ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setConfirmDelete(true)}
+                disabled={deleting}
+              >
+                Delete
               </Button>
+            ) : (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-muted-foreground">Sure?</span>
+                <Button size="sm" variant="destructive" onClick={deleteProposal} disabled={deleting}>
+                  {deleting ? '…' : 'Yes'}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>No</Button>
+              </div>
             )}
           </div>
         </div>
