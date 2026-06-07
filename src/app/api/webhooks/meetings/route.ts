@@ -1,3 +1,5 @@
+export const maxDuration = 60
+
 import { Webhook } from 'svix'
 import { Resend } from 'resend'
 import { generateObject } from 'ai'
@@ -114,7 +116,7 @@ export async function POST(req: Request) {
   let extracted: z.infer<typeof ExtractionSchema>
   try {
     const result = await generateObject({
-      model: VeniceModel.smart,
+      model: VeniceModel.fast,
       schema: ExtractionSchema,
       system: agentPrompts.secretary,
       prompt: `You are processing an Otter AI meeting summary for the Badger Creek Ranch HOA board.
