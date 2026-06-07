@@ -235,6 +235,7 @@ export const maintenanceRequests = pgTable('maintenance_requests', {
   category: text('category').$type<'plumbing' | 'electrical' | 'landscaping' | 'road' | 'common_area' | 'other'>().default('other'),
   priority: text('priority').$type<'low' | 'medium' | 'high' | 'urgent'>().default('medium'),
   status: text('status').$type<'open' | 'in_progress' | 'resolved' | 'closed'>().default('open'),
+  source: text('source').$type<'board' | 'portal'>().default('board'),
   assignedTo: text('assigned_to').references(() => users.id),
   vendorNotes: text('vendor_notes'),
   resolvedAt: timestamp('resolved_at'),
@@ -276,6 +277,32 @@ export const arcApplications = pgTable('arc_applications', {
   decidedAt: timestamp('decided_at'),
 })
 
+// ─── Violations ──────────────────────────────────────────────────────────────
+
+export const violations = pgTable('violations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  reportedBy: text('reported_by').references(() => users.id).notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status').$type<'open' | 'under_review' | 'resolved' | 'dismissed'>().default('open'),
+  resolvedAt: timestamp('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// ─── Inquiries ────────────────────────────────────────────────────────────────
+
+export const inquiries = pgTable('inquiries', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  fromUserId: text('from_user_id').references(() => users.id).notNull(),
+  category: text('category').$type<'dues' | 'general'>().notNull(),
+  message: text('message').notNull(),
+  status: text('status').$type<'open' | 'resolved'>().default('open'),
+  resolvedBy: text('resolved_by').references(() => users.id),
+  resolvedAt: timestamp('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
 // ─── Notifications ───────────────────────────────────────────────────────────
 
 export const notifications = pgTable('notifications', {
@@ -298,6 +325,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   boardMemberships: many(boardMembers),
   maintenanceRequests: many(maintenanceRequests),
   notifications: many(notifications),
+  violations: many(violations),
+  inquiries: many(inquiries),
 }))
 
 export const budgetsRelations = relations(budgets, ({ many }) => ({
@@ -338,6 +367,15 @@ export const arcApplicationsRelations = relations(arcApplications, ({ one }) => 
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, { fields: [notifications.userId], references: [users.id] }),
+}))
+
+export const violationsRelations = relations(violations, ({ one }) => ({
+  reporter: one(users, { fields: [violations.reportedBy], references: [users.id] }),
+}))
+
+export const inquiriesRelations = relations(inquiries, ({ one }) => ({
+  from: one(users, { fields: [inquiries.fromUserId], references: [users.id] }),
+  resolver: one(users, { fields: [inquiries.resolvedBy], references: [users.id] }),
 }))
 
 export const paymentsRelations = relations(payments, ({ one }) => ({

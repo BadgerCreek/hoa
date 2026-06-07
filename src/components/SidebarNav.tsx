@@ -12,16 +12,17 @@ const nav = [
   { href: '/tasks', label: 'Tasks' },
   { href: '/budget', label: 'Budget' },
   { href: '/payments', label: 'Payments' },
+  { href: '/arc', label: 'Review Committee' },
   { section: 'Community' },
   { href: '/directory', label: 'Directory' },
   { href: '/maintenance', label: 'Maintenance' },
-  { href: '/arc', label: 'Review Committee' },
+  { href: '/violations', label: 'Violations' },
   { href: '/meetings', label: 'Meetings' },
   { section: 'Board' },
   { href: '/members', label: 'Board Members' },
 ]
 
-export function SidebarNav() {
+export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
 
   return (
@@ -39,6 +40,7 @@ export function SidebarNav() {
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={`text-sm px-3 py-2 rounded-md transition-colors ${
               active
                 ? 'bg-zinc-800 text-zinc-100'

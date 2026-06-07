@@ -1,9 +1,10 @@
 import { db } from '@/db'
-import { tasks, proposals, transactions, budgets } from '@/db/schema'
-import { eq, desc, count, and, gte } from 'drizzle-orm'
+import { tasks, proposals, transactions, budgets, inquiries } from '@/db/schema'
+import { eq, desc, count } from 'drizzle-orm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { InboxList } from '@/components/InboxList'
 
 export default async function DashboardPage() {
   const year = new Date().getFullYear()
@@ -13,15 +14,23 @@ export default async function DashboardPage() {
     openProposals,
     recentTransactions,
     budget,
+    openInquiries,
   ] = await Promise.all([
     db.select({ count: count() }).from(tasks).where(eq(tasks.status, 'awaiting_human')),
     db.select({ count: count() }).from(proposals).where(eq(proposals.status, 'open')),
     db.select().from(transactions).orderBy(desc(transactions.date)).limit(5),
     db.query.budgets.findFirst({ where: eq(budgets.fiscalYear, year) }),
+    db.query.inquiries.findMany({
+      where: eq(inquiries.status, 'open'),
+      orderBy: desc(inquiries.createdAt),
+      with: { from: true },
+      limit: 20,
+    }),
   ])
 
   const pendingCount = awaitingTasks[0]?.count ?? 0
   const proposalCount = openProposals[0]?.count ?? 0
+  const inboxCount = openInquiries.length
 
   return (
     <div className="space-y-8">
@@ -31,10 +40,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className={pendingCount > 0 ? 'border-amber-400' : ''}>
           <CardHeader className="pb-2">
-            <CardDescription>Awaiting Your Review</CardDescription>
+            <CardDescription>Awaiting Review</CardDescription>
             <CardTitle className="text-3xl">{pendingCount}</CardTitle>
           </CardHeader>
           <CardContent>
@@ -49,6 +58,16 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <Link href="/proposals" className="text-sm text-blue-500 hover:underline">View proposals →</Link>
+          </CardContent>
+        </Card>
+
+        <Card className={inboxCount > 0 ? 'border-amber-400' : ''}>
+          <CardHeader className="pb-2">
+            <CardDescription>Inbox</CardDescription>
+            <CardTitle className="text-3xl">{inboxCount}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <span className="text-sm text-muted-foreground">Open inquiries</span>
           </CardContent>
         </Card>
 
@@ -68,6 +87,23 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Inbox */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Inbox</CardTitle>
+          <CardDescription>Dues and general inquiries from residents</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <InboxList initialInquiries={openInquiries.map((i) => ({
+            id: i.id,
+            category: i.category,
+            message: i.message,
+            createdAt: i.createdAt,
+            from: i.from ? { name: i.from.name, email: i.from.email } : null,
+          }))} />
+        </CardContent>
+      </Card>
 
       {/* Recent transactions */}
       <Card>

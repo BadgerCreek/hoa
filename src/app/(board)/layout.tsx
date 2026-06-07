@@ -1,9 +1,6 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { Separator } from '@/components/ui/separator'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { SignOutButton } from '@/components/SignOutButton'
-import { SidebarNav } from '@/components/SidebarNav'
+import { BoardSidebar } from '@/components/BoardSidebar'
 
 export default async function BoardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -13,29 +10,13 @@ export default async function BoardLayout({ children }: { children: React.ReactN
   const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
   if (!role || !BOARD_ROLES.includes(role)) redirect('/portal')
 
-  const initials = session.user?.name?.split(' ').map((n) => n[0]).join('') ?? '?'
+  const name = session.user?.name ?? ''
+  const initials = name.split(' ').map((n) => n[0]).join('') || '?'
 
   return (
     <div className="min-h-screen flex">
-      <aside className="w-56 bg-zinc-950 text-zinc-100 flex flex-col py-6 px-4 fixed h-full overflow-y-auto">
-        <div className="mb-4">
-          <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-widest">Badger Creek Ranch</p>
-          <p className="text-sm text-zinc-300 mt-1">Board Portal</p>
-        </div>
-        <Separator className="bg-zinc-800 mb-3" />
-        <SidebarNav />
-        <div className="mt-auto flex items-center gap-3 pt-4">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="bg-zinc-700 text-xs">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs truncate">{session.user?.name}</p>
-            <p className="text-xs text-zinc-400 capitalize">{role?.replace('board_', '')}</p>
-          </div>
-          <SignOutButton />
-        </div>
-      </aside>
-      <main className="ml-56 flex-1 p-8">{children}</main>
+      <BoardSidebar name={name} initials={initials} role={role} />
+      <main className="flex-1 md:ml-56 pt-14 md:pt-0 p-4 md:p-8">{children}</main>
     </div>
   )
 }
