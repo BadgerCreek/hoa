@@ -2,6 +2,7 @@ import { db } from '@/db'
 import { proposals, votes } from '@/db/schema'
 import { desc, inArray } from 'drizzle-orm'
 import { EditProposalCard } from '@/components/EditProposalCard'
+import { AddProposalDialog } from '@/components/AddProposalDialog'
 
 export default async function ProposalsPage() {
   const allProposals = await db.select().from(proposals).orderBy(desc(proposals.createdAt)).limit(50)
@@ -22,7 +23,10 @@ export default async function ProposalsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Proposals</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Proposals</h1>
+        <AddProposalDialog />
+      </div>
       {allProposals.length === 0 ? (
         <p className="text-muted-foreground">No proposals yet. Ask an AI agent to draft one.</p>
       ) : (

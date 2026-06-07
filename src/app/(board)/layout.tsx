@@ -16,7 +16,7 @@ export default async function BoardLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen flex">
       <BoardSidebar name={name} initials={initials} role={role} />
-      <main className="flex-1 md:ml-56 pt-14 md:pt-0 p-4 md:p-8">{children}</main>
+      <main className="flex-1 md:ml-56 pt-14 md:pt-8 p-4 md:p-8">{children}</main>
     </div>
   )
 }
