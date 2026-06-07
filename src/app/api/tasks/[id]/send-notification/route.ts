@@ -26,10 +26,6 @@ export async function POST(
 
   const task = await db.query.tasks.findFirst({ where: eq(tasks.id, id) })
   if (!task) return NextResponse.json({ error: 'Task not found' }, { status: 404 })
-  if (task.type !== 'notification') {
-    return NextResponse.json({ error: 'Task is not a notification type' }, { status: 400 })
-  }
-
   const body = await req.json().catch(() => ({}))
   const subject = (body.title as string | undefined)?.trim() || task.title
   const message = (body.body as string | undefined)?.trim() || task.description || task.title

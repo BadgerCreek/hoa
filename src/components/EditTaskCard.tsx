@@ -143,6 +143,7 @@ export function EditTaskCard({ task, isAdmin }: Props) {
   function openNotifModal() {
     setNotifTitle(task.title)
     setNotifBody(task.description ?? '')
+    setError('')
     setNotifModal(true)
   }
 
@@ -159,6 +160,8 @@ export function EditTaskCard({ task, isAdmin }: Props) {
       setNotifModal(false)
       setNotifResult({ sent: data.sent, total: data.total })
       router.refresh()
+    } else {
+      setError(data.error ?? 'Failed to send')
     }
   }
 
@@ -358,6 +361,7 @@ export function EditTaskCard({ task, isAdmin }: Props) {
             <p className="text-xs text-muted-foreground">
               This will be emailed to all residents and board members and posted as an in-app notification.
             </p>
+            {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNotifModal(false)} disabled={sendingNotif}>Cancel</Button>
