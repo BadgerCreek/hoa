@@ -35,14 +35,22 @@ export default async function MeetingsPage() {
                   {meeting.scheduledAt ? new Date(meeting.scheduledAt).toLocaleString() : '—'}
                 </CardDescription>
               </CardHeader>
-              {meeting.agenda && (
-                <CardContent>
-                  <details>
-                    <summary className="text-sm cursor-pointer text-muted-foreground hover:text-foreground">
-                      Agenda
-                    </summary>
-                    <p className="mt-2 text-sm whitespace-pre-wrap">{meeting.agenda}</p>
-                  </details>
+              {(meeting.agenda || meeting.minutes) && (
+                <CardContent className="space-y-2">
+                  {meeting.agenda && (
+                    <details>
+                      <summary className="text-sm cursor-pointer text-muted-foreground hover:text-foreground">Agenda</summary>
+                      <p className="mt-2 text-sm whitespace-pre-wrap">{meeting.agenda}</p>
+                    </details>
+                  )}
+                  {meeting.minutes && (
+                    <details>
+                      <summary className="text-sm cursor-pointer text-muted-foreground hover:text-foreground">
+                        Minutes <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-1">· AI processed</span>
+                      </summary>
+                      <div className="mt-2 p-3 bg-muted rounded-md text-sm whitespace-pre-wrap font-mono">{meeting.minutes}</div>
+                    </details>
+                  )}
                 </CardContent>
               )}
             </Card>

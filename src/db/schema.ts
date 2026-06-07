@@ -249,6 +249,7 @@ export const meetings = pgTable('meetings', {
   scheduledAt: timestamp('scheduled_at').notNull(),
   type: text('type').$type<'board' | 'annual' | 'special'>().default('board'),
   agenda: text('agenda'),
+  minutes: text('minutes'),
   minutesDocId: uuid('minutes_doc_id').references(() => documents.id),
   status: text('status').$type<'scheduled' | 'completed' | 'cancelled'>().default('scheduled'),
   createdBy: text('created_by').references(() => users.id),
