@@ -91,7 +91,14 @@ export async function POST(req: Request) {
   // Fetch full email body from Resend
   let content: string
   try {
-    const email = await (resend.emails as unknown as { receiving: { get: (id: string) => Promise<{ text?: string; html?: string; subject?: string }> } }).receiving.get(emailId)
+    const resp = await fetch(`https://api.resend.com/emails/receiving/${emailId}`, {
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+    })
+    const email = await resp.json()
+    console.log('[meetings webhook] email fetch status:', resp.status)
+    console.log('[meetings webhook] email keys:', Object.keys(email))
+    console.log('[meetings webhook] text length:', email.text?.length ?? 0)
+    console.log('[meetings webhook] html length:', email.html?.length ?? 0)
     content = email.text ?? (email.html ? stripHtml(email.html) : '')
   } catch (err) {
     console.error('[meetings webhook] Failed to fetch email body:', err)
@@ -99,6 +106,7 @@ export async function POST(req: Request) {
   }
 
   if (!content || content.length < 50) {
+    console.log('[meetings webhook] content too short:', content?.length ?? 0, JSON.stringify(content?.slice(0, 100)))
     return Response.json({ ok: true, message: 'Email too short, skipped' })
   }
 
