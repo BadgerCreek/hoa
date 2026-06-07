@@ -212,7 +212,7 @@ export function EditTaskCard({ task }: Props) {
           {editing ? (
             <>
               <textarea
-                className="w-full rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[80px] resize-y"
+                className="w-full rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[50vh] resize-y"
                 value={description}
                 onChange={e => setDescription(e.target.value)}
                 placeholder={taskType === 'notification' ? 'Write the message to send to residents…' : 'Description (optional)'}

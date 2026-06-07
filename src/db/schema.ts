@@ -363,6 +363,10 @@ export const maintenanceRequestsRelations = relations(maintenanceRequests, ({ on
   submitter: one(users, { fields: [maintenanceRequests.submittedBy], references: [users.id] }),
 }))
 
+export const documentsRelations = relations(documents, ({ one }) => ({
+  uploader: one(users, { fields: [documents.uploadedBy], references: [users.id] }),
+}))
+
 export const arcApplicationsRelations = relations(arcApplications, ({ one }) => ({
   property: one(properties, { fields: [arcApplications.propertyId], references: [properties.id] }),
   applicant: one(users, { fields: [arcApplications.applicantId], references: [users.id] }),

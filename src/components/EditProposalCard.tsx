@@ -120,7 +120,7 @@ export function EditProposalCard({ proposal, tally }: Props) {
         {editing ? (
           <>
             <textarea
-              className="w-full rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[120px] resize-y"
+              className="w-full rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[50vh] resize-y"
               value={content}
               onChange={e => setContent(e.target.value)}
             />

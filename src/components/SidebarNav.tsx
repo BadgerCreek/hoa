@@ -29,6 +29,7 @@ const nav: NavItem[] = [
     section: 'Community',
     items: [
       { href: '/directory', label: 'Directory' },
+      { href: '/documents', label: 'Documents' },
       { href: '/maintenance', label: 'Maintenance' },
       { href: '/violations', label: 'Violations' },
       { href: '/meetings', label: 'Meetings' },
