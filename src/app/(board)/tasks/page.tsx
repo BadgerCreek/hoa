@@ -1,10 +1,13 @@
 import { db } from '@/db'
 import { tasks } from '@/db/schema'
 import { desc } from 'drizzle-orm'
+import { auth, isAdmin as checkAdmin } from '@/lib/auth'
 import { EditTaskCard } from '@/components/EditTaskCard'
 import { AddTaskDialog } from '@/components/AddTaskDialog'
 
 export default async function TasksPage() {
+  const session = await auth()
+  const isAdmin = checkAdmin(session?.user?.role, session?.user?.isAdmin)
   const allTasks = await db.select().from(tasks).orderBy(desc(tasks.createdAt)).limit(50)
 
   return (
@@ -18,7 +21,7 @@ export default async function TasksPage() {
       ) : (
         <div className="space-y-4">
           {allTasks.map((task) => (
-            <EditTaskCard key={task.id} task={task} />
+            <EditTaskCard key={task.id} task={task} isAdmin={isAdmin} />
           ))}
         </div>
       )}

@@ -3,8 +3,7 @@ import { db } from '@/db'
 import { budgetLineItems } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+import { getPermissions, hasPermission } from '@/lib/permissions'
 
 const schema = z.object({
   description: z.string().min(1).optional(),
@@ -22,8 +21,12 @@ export async function PATCH(
   const session = await auth()
   if (!session?.user) return new Response('Unauthorized', { status: 401 })
 
-  const userRole = (session.user as { role?: string }).role
-  if (!userRole || !BOARD_ROLES.includes(userRole)) return new Response('Forbidden', { status: 403 })
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  const perms = await getPermissions()
+  if (!hasPermission(perms['budget.manage'], userRole, userIsAdmin)) {
+    return new Response('Forbidden', { status: 403 })
+  }
 
   const { id } = await params
   const parsed = schema.safeParse(await req.json())
@@ -44,8 +47,12 @@ export async function DELETE(
   const session = await auth()
   if (!session?.user) return new Response('Unauthorized', { status: 401 })
 
-  const userRole = (session.user as { role?: string }).role
-  if (!userRole || !BOARD_ROLES.includes(userRole)) return new Response('Forbidden', { status: 403 })
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  const perms = await getPermissions()
+  if (!hasPermission(perms['budget.manage'], userRole, userIsAdmin)) {
+    return new Response('Forbidden', { status: 403 })
+  }
 
   const { id } = await params
   await db.delete(budgetLineItems).where(eq(budgetLineItems.id, id))

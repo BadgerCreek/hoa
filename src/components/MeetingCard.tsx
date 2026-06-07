@@ -35,16 +35,16 @@ const statusColor: Record<MeetingStatus, 'default' | 'secondary' | 'destructive'
   cancelled: 'destructive',
 }
 
-export function MeetingCard({ meeting }: { meeting: Meeting }) {
+export function MeetingCard({ meeting, isAdmin }: { meeting: Meeting; isAdmin: boolean }) {
   const [open, setOpen] = useState(meeting.status === 'completed')
   const status = (meeting.status ?? 'scheduled') as MeetingStatus
   const hasContent = meeting.minutes || meeting.transcript || meeting.tasks.length > 0
 
   return (
-    <div className="rounded-lg border overflow-hidden">
+    <div className="rounded-lg overflow-hidden">
       {/* Header */}
       <div
-        className={`flex items-start justify-between gap-4 px-4 py-3 ${hasContent ? 'cursor-pointer hover:bg-muted/30 transition-colors' : ''}`}
+        className={`flex items-start justify-between gap-4 px-4 py-3 rounded-lg ${hasContent ? 'cursor-pointer bg-muted hover:bg-muted/80 transition-colors' : 'bg-muted'}`}
         onClick={() => hasContent && setOpen(o => !o)}
       >
         <div className="flex-1 min-w-0">
@@ -74,7 +74,7 @@ export function MeetingCard({ meeting }: { meeting: Meeting }) {
 
       {/* Tabbed content */}
       {open && hasContent && (
-        <div className="border-t px-4 py-4">
+        <div className="px-4 py-4">
           <Tabs defaultValue={meeting.minutes ? 'minutes' : meeting.tasks.length ? 'actions' : 'transcript'}>
             <TabsList className="mb-4">
               {meeting.minutes && <TabsTrigger value="minutes">Minutes</TabsTrigger>}
@@ -107,7 +107,7 @@ export function MeetingCard({ meeting }: { meeting: Meeting }) {
                   <p className="text-sm text-muted-foreground">No action items extracted.</p>
                 ) : (
                   meeting.tasks.map(task => (
-                    <EditTaskCard key={task.id} task={task} />
+                    <EditTaskCard key={task.id} task={task} isAdmin={isAdmin} />
                   ))
                 )}
               </TabsContent>

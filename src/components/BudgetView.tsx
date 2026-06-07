@@ -56,7 +56,7 @@ function fyLabel(year: number) {
 // ─── Editable Cell ────────────────────────────────────────────────────────────
 
 function EditableCell({
-  value, onSave, align = 'right', className = '', placeholder = '—', monospace = false,
+  value, onSave, align = 'right', className = '', placeholder = '—', monospace = false, editable = true,
 }: {
   value: string | null
   onSave: (v: string) => void
@@ -64,12 +64,14 @@ function EditableCell({
   className?: string
   placeholder?: string
   monospace?: boolean
+  editable?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [raw, setRaw] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   function start() {
+    if (!editable) return
     setRaw(value ?? '')
     setEditing(true)
     setTimeout(() => inputRef.current?.select(), 0)
@@ -99,7 +101,7 @@ function EditableCell({
   return (
     <span
       onClick={start}
-      className={`cursor-text select-none px-1 rounded hover:bg-muted/60 transition-colors text-sm ${align === 'right' ? 'text-right block' : ''} ${monospace ? 'font-mono tabular-nums' : ''} ${className}`}
+      className={`${editable ? 'cursor-text hover:bg-muted/60' : 'cursor-default'} select-none px-1 rounded transition-colors text-sm ${align === 'right' ? 'text-right block' : ''} ${monospace ? 'font-mono tabular-nums' : ''} ${className}`}
     >
       {value || placeholder}
     </span>
@@ -112,10 +114,12 @@ export function BudgetView({
   initialLines,
   transactions,
   fiscalYear,
+  isAdmin,
 }: {
   initialLines: BudgetLine[]
   transactions: Transaction[]
   fiscalYear: number
+  isAdmin: boolean
 }) {
   const [lines, setLines] = useState<BudgetLine[]>(initialLines)
   const [seeding, setSeeding] = useState(false)
@@ -192,28 +196,30 @@ export function BudgetView({
           return (
             <tr key={line.id} className="group hover:bg-muted/30 transition-colors">
               <td className="px-4 py-1.5 w-[40%]">
-                <EditableCell value={line.description} onSave={v => updateLine(line.id, 'description', v)} align="left" />
+                <EditableCell value={line.description} onSave={v => updateLine(line.id, 'description', v)} align="left" editable={isAdmin} />
               </td>
               <td className="px-3 py-1.5 text-right">
-                <EditableCell value={line.budgetedAmount} onSave={v => updateLine(line.id, 'budgetedAmount', v)} monospace />
+                <EditableCell value={line.budgetedAmount} onSave={v => updateLine(line.id, 'budgetedAmount', v)} monospace editable={isAdmin} />
               </td>
               <td className="px-3 py-1.5 text-right">
-                <EditableCell value={line.actualAmount} onSave={v => updateLine(line.id, 'actualAmount', v)} monospace />
+                <EditableCell value={line.actualAmount} onSave={v => updateLine(line.id, 'actualAmount', v)} monospace editable={isAdmin} />
               </td>
               <td className={`px-3 py-1.5 text-right font-mono tabular-nums text-sm ${diffClass(diff, section)}`}>
                 {fmt(diff)}
               </td>
               <td className="w-8 px-2">
-                <button onClick={() => deleteLine(line.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all text-xs">✕</button>
+                {isAdmin && <button onClick={() => deleteLine(line.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all text-xs">✕</button>}
               </td>
             </tr>
           )
         })}
-        <tr>
-          <td className="px-4 py-1">
-            <button onClick={() => addRow(section)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">+ Add row</button>
-          </td>
-        </tr>
+        {isAdmin && (
+          <tr>
+            <td className="px-4 py-1">
+              <button onClick={() => addRow(section)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">+ Add row</button>
+            </td>
+          </tr>
+        )}
       </tbody>
     )
   }
@@ -232,31 +238,33 @@ export function BudgetView({
           return (
             <tr key={line.id} className="group hover:bg-muted/30 transition-colors">
               <td className="px-4 py-1.5 w-[30%]">
-                <EditableCell value={line.description} onSave={v => updateLine(line.id, 'description', v)} align="left" />
+                <EditableCell value={line.description} onSave={v => updateLine(line.id, 'description', v)} align="left" editable={isAdmin} />
               </td>
               <td className="px-3 py-1.5 text-right">
                 <span className="font-mono tabular-nums text-sm text-muted-foreground">{fmt(n(line.budgetedAmount))}</span>
               </td>
               <td className="px-3 py-1.5 text-right">
-                <EditableCell value={line.proposedAmount} onSave={v => updateLine(line.id, 'proposedAmount', v)} monospace />
+                <EditableCell value={line.proposedAmount} onSave={v => updateLine(line.id, 'proposedAmount', v)} monospace editable={isAdmin} />
               </td>
               <td className={`px-3 py-1.5 text-right font-mono tabular-nums text-sm ${diffClass(change, section)}`}>
                 {change === 0 ? '—' : fmt(change)}
               </td>
               <td className="px-3 py-1.5">
-                <EditableCell value={line.comment} onSave={v => updateLine(line.id, 'comment', v)} align="left" placeholder="Add note…" className="text-muted-foreground italic" />
+                <EditableCell value={line.comment} onSave={v => updateLine(line.id, 'comment', v)} align="left" placeholder="Add note…" className="text-muted-foreground italic" editable={isAdmin} />
               </td>
               <td className="w-8 px-2">
-                <button onClick={() => deleteLine(line.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all text-xs">✕</button>
+                {isAdmin && <button onClick={() => deleteLine(line.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all text-xs">✕</button>}
               </td>
             </tr>
           )
         })}
-        <tr>
-          <td className="px-4 py-1">
-            <button onClick={() => addRow(section)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">+ Add row</button>
-          </td>
-        </tr>
+        {isAdmin && (
+          <tr>
+            <td className="px-4 py-1">
+              <button onClick={() => addRow(section)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">+ Add row</button>
+            </td>
+          </tr>
+        )}
       </tbody>
     )
   }
@@ -267,9 +275,11 @@ export function BudgetView({
     return (
       <div className="text-center py-16 space-y-4">
         <p className="text-muted-foreground">No budget data for {fyLabel(fiscalYear)}.</p>
-        <Button variant="outline" onClick={seed} disabled={seeding}>
-          {seeding ? 'Loading…' : `Load FY 25/26 sample data`}
-        </Button>
+        {isAdmin && (
+          <Button variant="outline" onClick={seed} disabled={seeding}>
+            {seeding ? 'Loading…' : `Load FY 25/26 sample data`}
+          </Button>
+        )}
       </div>
     )
   }
@@ -284,9 +294,11 @@ export function BudgetView({
           <TabsTrigger value="proposed">Proposed {fyLabel(fiscalYear + 1)}</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
-        <Button variant="ghost" size="sm" onClick={seed} disabled={seeding} className="text-xs text-muted-foreground">
-          {seeding ? 'Loading…' : 'Reload sample data'}
-        </Button>
+        {isAdmin && (
+          <Button variant="ghost" size="sm" onClick={seed} disabled={seeding} className="text-xs text-muted-foreground">
+            {seeding ? 'Loading…' : 'Reload sample data'}
+          </Button>
+        )}
       </div>
 
       {/* ── Budget vs Actual ── */}

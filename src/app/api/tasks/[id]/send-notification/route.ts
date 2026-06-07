@@ -11,7 +11,7 @@ const FROM = process.env.RESEND_FROM_EMAIL ?? 'Badger Creek Ranch HOA <hoa@knigh
 const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth()
@@ -30,8 +30,10 @@ export async function POST(
     return NextResponse.json({ error: 'Task is not a notification type' }, { status: 400 })
   }
 
-  const message = task.description ?? task.title
-  const residents = await db.select().from(users).where(eq(users.role, 'resident'))
+  const body = await req.json().catch(() => ({}))
+  const subject = (body.title as string | undefined)?.trim() || task.title
+  const message = (body.body as string | undefined)?.trim() || task.description || task.title
+  const residents = await db.select().from(users)
 
   // Create in-app notifications
   if (residents.length > 0) {
@@ -45,14 +47,21 @@ export async function POST(
     )
   }
 
+  // Convert plain text to simple HTML (linkifies URLs, preserves line breaks)
+  const html = message
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1">$1</a>')
+    .replace(/\n/g, '<br>')
+
   // Send emails
   const emailResults = await Promise.allSettled(
     residents.map((r) =>
       resend.emails.send({
         from: FROM,
         to: r.email,
-        subject: task.title,
+        subject,
         text: message,
+        html: `<div style="font-family:sans-serif;font-size:15px;line-height:1.6">${html}</div>`,
       })
     )
   )

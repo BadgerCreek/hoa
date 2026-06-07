@@ -28,6 +28,7 @@ interface AddButtonProps {
 }
 interface ActionsProps {
   isTreasurer: boolean
+  isAdmin: boolean
   mode: 'actions'
   paymentId: string
   payment: Omit<PaymentForm, 'amount'> & { amount: number }
@@ -133,7 +134,7 @@ export function PaymentsClient(props: Props) {
   return (
     <>
       <div className="flex gap-2 flex-wrap">
-        <Button size="sm" variant="ghost" onClick={openEdit} disabled={acting}>Edit</Button>
+        {props.isAdmin && <Button size="sm" variant="ghost" onClick={openEdit} disabled={acting}>Edit</Button>}
         {props.isTreasurer && (
           <>
             <Button size="sm" onClick={approve} disabled={acting}>Approve</Button>

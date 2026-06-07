@@ -3,8 +3,7 @@ import { db } from '@/db'
 import { proposals, auditLogs } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+import { getPermissions, hasPermission } from '@/lib/permissions'
 
 const schema = z.object({
   title: z.string().min(1).optional(),
@@ -18,8 +17,10 @@ export async function PATCH(
   const session = await auth()
   if (!session?.user) return new Response('Unauthorized', { status: 401 })
 
-  const userRole = (session.user as { role?: string }).role
-  if (!userRole || !BOARD_ROLES.includes(userRole)) {
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  const perms = await getPermissions()
+  if (!hasPermission(perms['proposals.edit'], userRole, userIsAdmin)) {
     return new Response('Forbidden', { status: 403 })
   }
 
@@ -53,8 +54,10 @@ export async function DELETE(
   const session = await auth()
   if (!session?.user) return new Response('Unauthorized', { status: 401 })
 
-  const userRole = (session.user as { role?: string }).role
-  if (!userRole || !BOARD_ROLES.includes(userRole)) {
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  const perms = await getPermissions()
+  if (!hasPermission(perms['proposals.delete'], userRole, userIsAdmin)) {
     return new Response('Forbidden', { status: 403 })
   }
 

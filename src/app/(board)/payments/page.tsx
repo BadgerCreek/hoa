@@ -1,7 +1,7 @@
 import { db } from '@/db'
 import { payments } from '@/db/schema'
 import { desc } from 'drizzle-orm'
-import { auth } from '@/lib/auth'
+import { auth, isAdmin as checkAdmin } from '@/lib/auth'
 import { Badge } from '@/components/ui/badge'
 import { PaymentsClient } from '@/components/PaymentsClient'
 
@@ -18,8 +18,10 @@ function fmt(val: string | null) {
 
 export default async function PaymentsPage() {
   const session = await auth()
-  const userRole = (session?.user as { role?: string })?.role ?? ''
-  const isTreasurer = userRole === 'board_treasurer' || userRole === 'admin'
+  const userRole = session?.user?.role ?? ''
+  const userIsAdmin = session?.user?.isAdmin ?? false
+  const isTreasurer = userRole === 'board_treasurer' || checkAdmin(userRole, userIsAdmin)
+  const isAdmin = checkAdmin(userRole, userIsAdmin)
 
   const allPayments = await db.query.payments.findMany({
     orderBy: desc(payments.createdAt),
@@ -72,6 +74,7 @@ export default async function PaymentsPage() {
               {p.status === 'pending' && (
                 <PaymentsClient
                   isTreasurer={isTreasurer}
+                  isAdmin={isAdmin}
                   mode="actions"
                   paymentId={p.id}
                   payment={{ title: p.title, description: p.description ?? '', amount: Number(p.amount), vendor: p.vendor ?? '', category: (p.category ?? 'other') as never }}

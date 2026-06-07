@@ -25,6 +25,7 @@ export const users = pgTable('users', {
   role: text('role')
     .$type<'resident' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'admin'>()
     .default('resident'),
+  isAdmin: boolean('is_admin').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 })
 
@@ -391,3 +392,12 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   budget: one(budgets, { fields: [payments.budgetId], references: [budgets.id] }),
   transaction: one(transactions, { fields: [payments.transactionId], references: [transactions.id] }),
 }))
+
+// ─── App Settings ─────────────────────────────────────────────────────────────
+
+export const settings = pgTable('settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  updatedBy: text('updated_by').references(() => users.id, { onDelete: 'set null' }),
+})

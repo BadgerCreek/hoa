@@ -1,9 +1,12 @@
 import { db } from '@/db'
 import { budgets, transactions, budgetLineItems } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
+import { auth, isAdmin as checkAdmin } from '@/lib/auth'
 import { BudgetView } from '@/components/BudgetView'
 
 export default async function BudgetPage() {
+  const session = await auth()
+  const isAdmin = checkAdmin(session?.user?.role, session?.user?.isAdmin)
   const FISCAL_YEAR = 2025 // FY 25/26 (April 1 – March 31)
 
   const lines = await db.select().from(budgetLineItems)
@@ -30,6 +33,7 @@ export default async function BudgetPage() {
         initialLines={lines}
         transactions={txList}
         fiscalYear={FISCAL_YEAR}
+        isAdmin={isAdmin}
       />
     </div>
   )

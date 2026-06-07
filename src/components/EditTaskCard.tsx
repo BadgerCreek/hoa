@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 type TaskStatus = 'pending' | 'in_progress' | 'awaiting_human' | 'approved' | 'completed' | 'rejected'
 type TaskType = 'notification' | 'schedule_meeting' | 'phone_call' | 'get_quote' | 'request_payment' | 'request_invoice' | 'general'
@@ -68,9 +70,10 @@ interface Props {
     type: string | null
     createdByAgent: string | null
   }
+  isAdmin: boolean
 }
 
-export function EditTaskCard({ task }: Props) {
+export function EditTaskCard({ task, isAdmin }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(task.title)
@@ -84,6 +87,9 @@ export function EditTaskCard({ task }: Props) {
   const [draftLoading, setDraftLoading] = useState(false)
   const [notifResult, setNotifResult] = useState<{ sent: number; total: number } | null>(null)
   const [sendingNotif, setSendingNotif] = useState(false)
+  const [notifModal, setNotifModal] = useState(false)
+  const [notifTitle, setNotifTitle] = useState('')
+  const [notifBody, setNotifBody] = useState('')
 
   const status = (task.status ?? 'pending') as TaskStatus
   const taskType: TaskType = (task.type && task.type !== 'general')
@@ -134,12 +140,23 @@ export function EditTaskCard({ task }: Props) {
     setDraftLoading(false)
   }
 
+  function openNotifModal() {
+    setNotifTitle(task.title)
+    setNotifBody(task.description ?? '')
+    setNotifModal(true)
+  }
+
   async function sendNotification() {
     setSendingNotif(true)
-    const resp = await fetch(`/api/tasks/${task.id}/send-notification`, { method: 'POST' })
+    const resp = await fetch(`/api/tasks/${task.id}/send-notification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: notifTitle, body: notifBody }),
+    })
     const data = await resp.json()
     setSendingNotif(false)
     if (resp.ok) {
+      setNotifModal(false)
       setNotifResult({ sent: data.sent, total: data.total })
       router.refresh()
     }
@@ -179,10 +196,10 @@ export function EditTaskCard({ task }: Props) {
                 <Badge variant="secondary" className="text-xs">{typeLabel[taskType]}</Badge>
               )}
               <Badge variant={statusColor[status]}>{statusLabel[status]}</Badge>
-              {!editing && status !== 'completed' && (
+              {isAdmin && !editing && status !== 'completed' && (
                 <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
               )}
-              {!confirmDelete ? (
+              {isAdmin && (!confirmDelete ? (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -200,7 +217,7 @@ export function EditTaskCard({ task }: Props) {
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>No</Button>
                 </div>
-              )}
+              ))}
             </div>
           </div>
           {task.createdByAgent && (
@@ -261,15 +278,9 @@ export function EditTaskCard({ task }: Props) {
                   )}
 
                   {taskType === 'notification' && !notifResult && (
-                    <Button size="sm" variant="outline" onClick={sendNotification} disabled={sendingNotif}>
-                      {sendingNotif ? 'Sending…' : '📢 Send to Residents'}
+                    <Button size="sm" variant="outline" onClick={openNotifModal}>
+                      📢 Create Message
                     </Button>
-                  )}
-
-                  {notifResult && (
-                    <p className="text-xs text-muted-foreground">
-                      Sent to {notifResult.sent}/{notifResult.total} residents
-                    </p>
                   )}
 
                   {taskType === 'phone_call' && (
@@ -280,6 +291,13 @@ export function EditTaskCard({ task }: Props) {
                 </div>
               )}
             </>
+          )}
+          {notifResult && (
+            <p className={`text-xs mt-2 ${notifResult.total === 0 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+              {notifResult.total === 0
+                ? 'No residents in the system — nobody was emailed. Add residents in the Directory first.'
+                : `Sent to ${notifResult.sent}/${notifResult.total} residents`}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -310,6 +328,42 @@ export function EditTaskCard({ task }: Props) {
             <Button onClick={() => {
               navigator.clipboard.writeText(`Subject: ${emailDraft?.subject}\n\n${emailDraft?.body}`)
             }}>Copy to Clipboard</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={notifModal} onOpenChange={v => { if (!sendingNotif) setNotifModal(v) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Message to Residents</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Subject</Label>
+              <Input
+                value={notifTitle}
+                onChange={e => setNotifTitle(e.target.value)}
+                placeholder="Message subject…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Body</Label>
+              <textarea
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[160px] resize-y"
+                value={notifBody}
+                onChange={e => setNotifBody(e.target.value)}
+                placeholder="Write your message to residents…"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This will be emailed to all residents and board members and posted as an in-app notification.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNotifModal(false)} disabled={sendingNotif}>Cancel</Button>
+            <Button onClick={sendNotification} disabled={sendingNotif || !notifTitle.trim() || !notifBody.trim()}>
+              {sendingNotif ? 'Sending…' : 'Send to Residents'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

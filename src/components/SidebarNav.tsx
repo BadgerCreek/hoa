@@ -39,6 +39,7 @@ const nav: NavItem[] = [
     section: 'Board',
     items: [
       { href: '/members', label: 'Board Members' },
+      { href: '/settings', label: 'Settings' },
     ],
   },
 ]

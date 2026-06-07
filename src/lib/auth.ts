@@ -67,7 +67,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     verificationTokensTable: verificationTokens,
   }),
   providers: [
-    Google,
+    Google({ allowDangerousEmailAccountLinking: true }),
     Resend({
       from: FROM,
       sendVerificationRequest: async ({ identifier: email, url }) => {
@@ -84,6 +84,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     session({ session, user }) {
       session.user.id = user.id
+      session.user.role = user.role ?? null
+      session.user.isAdmin = user.isAdmin ?? false
       return session
     },
   },
@@ -92,3 +94,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     verifyRequest: '/login/verify',
   },
 })
+
+export function isAdmin(
+  role: string | undefined | null,
+  isAdminFlag: boolean | undefined | null = false
+): boolean {
+  return role === 'admin' || isAdminFlag === true
+}

@@ -3,8 +3,7 @@ import { db } from '@/db'
 import { users, properties, auditLogs } from '@/db/schema'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
-
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+import { getPermissions, hasPermission } from '@/lib/permissions'
 
 const schema = z.object({
   name: z.string().min(1),
@@ -19,8 +18,10 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user) return new Response('Unauthorized', { status: 401 })
 
-  const userRole = (session.user as { role?: string }).role
-  if (!userRole || !BOARD_ROLES.includes(userRole)) {
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  const perms = await getPermissions()
+  if (!hasPermission(perms['members.manage'], userRole, userIsAdmin)) {
     return new Response('Forbidden', { status: 403 })
   }
 

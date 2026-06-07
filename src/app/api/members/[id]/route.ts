@@ -3,14 +3,14 @@ import { db } from '@/db'
 import { users, properties, auditLogs, duesAssessments } from '@/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { z } from 'zod'
-
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+import { getPermissions, hasPermission } from '@/lib/permissions'
 
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
   role: z.enum(['resident', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']).optional(),
+  isAdmin: z.boolean().optional(),
   lotNumber: z.string().optional(),
   address: z.string().optional(),
   duesStatus: z.enum(['pending', 'paid', 'late', 'waived']).optional(),
@@ -23,8 +23,10 @@ export async function PATCH(
   const session = await auth()
   if (!session?.user) return new Response('Unauthorized', { status: 401 })
 
-  const userRole = (session.user as { role?: string }).role
-  if (!userRole || !BOARD_ROLES.includes(userRole)) {
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  const perms = await getPermissions()
+  if (!hasPermission(perms['members.manage'], userRole, userIsAdmin)) {
     return new Response('Forbidden', { status: 403 })
   }
 
@@ -46,7 +48,6 @@ export async function PATCH(
         .set({ ...(lotNumber !== undefined && { lotNumber }), ...(address !== undefined && { address }) })
         .where(eq(properties.ownerId, id))
     } else {
-      // Create property even with just a lot number
       const [created] = await db.insert(properties).values({
         ownerId: id,
         address: address ?? '',
@@ -96,8 +97,10 @@ export async function DELETE(
   const session = await auth()
   if (!session?.user) return new Response('Unauthorized', { status: 401 })
 
-  const userRole = (session.user as { role?: string }).role
-  if (!userRole || !BOARD_ROLES.includes(userRole)) {
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  const perms = await getPermissions()
+  if (!hasPermission(perms['members.manage'], userRole, userIsAdmin)) {
     return new Response('Forbidden', { status: 403 })
   }
 
@@ -107,7 +110,6 @@ export async function DELETE(
     return new Response('Cannot delete your own account', { status: 400 })
   }
 
-  // Null out property ownership before deleting user (no cascade on ownerId)
   await db.update(properties).set({ ownerId: null }).where(eq(properties.ownerId, id))
   await db.delete(users).where(eq(users.id, id))
 

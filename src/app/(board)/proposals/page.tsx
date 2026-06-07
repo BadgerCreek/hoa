@@ -1,10 +1,13 @@
 import { db } from '@/db'
 import { proposals, votes } from '@/db/schema'
 import { desc, inArray } from 'drizzle-orm'
+import { auth, isAdmin as checkAdmin } from '@/lib/auth'
 import { EditProposalCard } from '@/components/EditProposalCard'
 import { AddProposalDialog } from '@/components/AddProposalDialog'
 
 export default async function ProposalsPage() {
+  const session = await auth()
+  const isAdmin = checkAdmin(session?.user?.role, session?.user?.isAdmin)
   const allProposals = await db.select().from(proposals).orderBy(desc(proposals.createdAt)).limit(50)
 
   const proposalIds = allProposals.map(p => p.id)
@@ -36,6 +39,7 @@ export default async function ProposalsPage() {
               key={proposal.id}
               proposal={proposal}
               tally={getTally(proposal.id)}
+              isAdmin={isAdmin}
             />
           ))}
         </div>

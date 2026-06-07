@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ProposalActions } from '@/components/ProposalActions'
+import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 type Status = 'draft' | 'open' | 'closed' | 'approved' | 'rejected'
 
@@ -26,9 +27,10 @@ interface Props {
     agentId: string | null
   }
   tally: { yes: number; no: number; abstain: number }
+  isAdmin: boolean
 }
 
-export function EditProposalCard({ proposal, tally }: Props) {
+export function EditProposalCard({ proposal, tally, isAdmin }: Props) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(proposal.title)
@@ -50,10 +52,7 @@ export function EditProposalCard({ proposal, tally }: Props) {
       body: JSON.stringify({ title, content }),
     })
     setSaving(false)
-    if (!resp.ok) {
-      setError('Failed to save')
-      return
-    }
+    if (!resp.ok) { setError('Failed to save'); return }
     setEditing(false)
     router.refresh()
   }
@@ -73,29 +72,47 @@ export function EditProposalCard({ proposal, tally }: Props) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-4">
-          {editing ? (
-            <input
-              className="flex-1 rounded border bg-background px-2 py-1 text-base font-medium focus:outline-none focus:ring-2 focus:ring-ring"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              autoFocus
-            />
-          ) : (
-            <CardTitle className="text-base font-medium">{title}</CardTitle>
-          )}
-          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-            <Badge variant={statusColor[status]}>{status}</Badge>
-            {!editing && (
-              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
+    <AccordionPrimitive.Root
+      multiple={false}
+      className="rounded-lg"
+    >
+      <AccordionPrimitive.Item value={proposal.id} className="border-none">
+        {/* Custom header: trigger on the left, action buttons on the right */}
+        <AccordionPrimitive.Header className="flex items-center px-4 py-3 gap-2 bg-muted hover:bg-muted/80 transition-colors rounded-lg data-[panel-open]:rounded-b-none">
+          <AccordionPrimitive.Trigger className="group flex flex-1 items-center gap-2 min-w-0 text-left outline-none">
+            {editing ? (
+              <input
+                className="flex-1 rounded border bg-background px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                onClick={e => e.stopPropagation()}
+                autoFocus
+              />
+            ) : (
+              <span className="flex-1 text-sm font-medium truncate">{title}</span>
             )}
-            {!confirmDelete ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 group-aria-expanded:hidden" />
+            <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0 hidden group-aria-expanded:inline" />
+          </AccordionPrimitive.Trigger>
+
+          {/* These live outside the trigger so they don't toggle the accordion */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant={statusColor[status]} className="text-xs">{status}</Badge>
+            {totalVotes > 0 && (
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                {tally.yes}Y · {tally.no}N · {tally.abstain}A
+              </span>
+            )}
+            {isAdmin && !editing && (
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setEditing(true)}>
+                Edit
+              </Button>
+            )}
+            {isAdmin && (!confirmDelete ? (
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={() => setConfirmDelete(true)}
                 disabled={deleting}
               >
@@ -104,51 +121,52 @@ export function EditProposalCard({ proposal, tally }: Props) {
             ) : (
               <div className="flex items-center gap-1">
                 <span className="text-xs text-muted-foreground">Sure?</span>
-                <Button size="sm" variant="destructive" onClick={deleteProposal} disabled={deleting}>
+                <Button size="sm" variant="destructive" className="h-7 px-2 text-xs" onClick={deleteProposal} disabled={deleting}>
                   {deleting ? '…' : 'Yes'}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>No</Button>
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setConfirmDelete(false)}>No</Button>
+              </div>
+            ))}
+          </div>
+        </AccordionPrimitive.Header>
+
+        <AccordionPrimitive.Panel className="overflow-hidden data-open:animate-accordion-down data-closed:animate-accordion-up">
+          <div className="px-4 pb-4 pt-3 bg-background rounded-b-lg">
+            {proposal.agentId && (
+              <p className="text-xs text-muted-foreground mb-3">Drafted by {proposal.agentId} agent</p>
+            )}
+            {editing ? (
+              <div className="space-y-3">
+                <textarea
+                  className="w-full rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[50vh] resize-y"
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                />
+                {error && <p className="text-xs text-destructive">{error}</p>}
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={save} disabled={saving || !title.trim() || !content.trim()}>
+                    {saving ? 'Saving…' : 'Save'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={cancel} disabled={saving}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm whitespace-pre-wrap">{content}</p>
+                {totalVotes > 0 && (
+                  <div className="flex gap-4 text-sm text-muted-foreground">
+                    <span className="text-green-600 dark:text-green-400">Yes: {tally.yes}</span>
+                    <span className="text-red-600 dark:text-red-400">No: {tally.no}</span>
+                    <span>Abstain: {tally.abstain}</span>
+                    <span className="ml-auto">{totalVotes} total</span>
+                  </div>
+                )}
+                <ProposalActions proposalId={proposal.id} currentStatus={status} />
               </div>
             )}
           </div>
-        </div>
-        {proposal.agentId && (
-          <CardDescription>Drafted by {proposal.agentId} agent</CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {editing ? (
-          <>
-            <textarea
-              className="w-full rounded border bg-background px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring min-h-[50vh] resize-y"
-              value={content}
-              onChange={e => setContent(e.target.value)}
-            />
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <div className="flex gap-2">
-              <Button size="sm" onClick={save} disabled={saving || !title.trim() || !content.trim()}>
-                {saving ? 'Saving…' : 'Save'}
-              </Button>
-              <Button size="sm" variant="outline" onClick={cancel} disabled={saving}>
-                Cancel
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="text-sm whitespace-pre-wrap">{content}</p>
-            {totalVotes > 0 && (
-              <div className="flex gap-4 text-sm text-muted-foreground">
-                <span className="text-green-600 dark:text-green-400">Yes: {tally.yes}</span>
-                <span className="text-red-600 dark:text-red-400">No: {tally.no}</span>
-                <span>Abstain: {tally.abstain}</span>
-                <span className="ml-auto">{totalVotes} total</span>
-              </div>
-            )}
-            <ProposalActions proposalId={proposal.id} currentStatus={status} />
-          </>
-        )}
-      </CardContent>
-    </Card>
+        </AccordionPrimitive.Panel>
+      </AccordionPrimitive.Item>
+    </AccordionPrimitive.Root>
   )
 }

@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 
 type Role = 'resident' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'admin'
 
@@ -29,6 +30,7 @@ interface Member {
   email: string
   phone: string | null
   role: string | null
+  isAdminFlag: boolean
   lotNumber: string | null
   address: string | null
 }
@@ -56,11 +58,11 @@ interface DuesInfo {
 
 interface FormState {
   name: string; email: string; phone: string; role: Role
-  lotNumber: string; address: string; duesStatus: string
+  lotNumber: string; address: string; duesStatus: string; isAdmin: boolean
 }
-const empty: FormState = { name: '', email: '', phone: '', role: 'resident', lotNumber: '', address: '', duesStatus: '' }
+const empty: FormState = { name: '', email: '', phone: '', role: 'resident', lotNumber: '', address: '', duesStatus: '', isAdmin: false }
 
-export function MemberTable({ members, duesByMember }: { members: Member[]; duesByMember: Record<string, string | null> }) {
+export function MemberTable({ members, duesByMember, isAdmin }: { members: Member[]; duesByMember: Record<string, string | null>; isAdmin: boolean }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Member | null>(null)
@@ -87,12 +89,13 @@ export function MemberTable({ members, duesByMember }: { members: Member[]; dues
       lotNumber: m.lotNumber ?? '',
       address: m.address ?? '',
       duesStatus: (duesByMember[m.id] ?? '') as string,
+      isAdmin: m.isAdminFlag,
     })
     setError('')
     setOpen(true)
   }
 
-  function field(key: keyof FormState, value: string) {
+  function field(key: keyof FormState, value: string | boolean) {
     setForm(f => ({ ...f, [key]: value }))
   }
 
@@ -109,6 +112,7 @@ export function MemberTable({ members, duesByMember }: { members: Member[]; dues
       email: form.email,
       phone: form.phone || undefined,
       role: form.role,
+      isAdmin: form.isAdmin,
       lotNumber: form.lotNumber || undefined,
       address: form.address || undefined,
       duesStatus: form.duesStatus || undefined,
@@ -141,7 +145,7 @@ export function MemberTable({ members, duesByMember }: { members: Member[]; dues
     <>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">{members.length} members</p>
-        <Button size="sm" onClick={openAdd}>Add Member</Button>
+        {isAdmin && <Button size="sm" onClick={openAdd}>Add Member</Button>}
       </div>
 
       <div className="rounded-md border overflow-hidden">
@@ -188,10 +192,12 @@ export function MemberTable({ members, duesByMember }: { members: Member[]; dues
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-1 justify-end">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>Edit</Button>
-                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(m)}>Delete</Button>
-                    </div>
+                    {isAdmin && (
+                      <div className="flex gap-1 justify-end">
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(m)}>Edit</Button>
+                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(m)}>Delete</Button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )
@@ -256,6 +262,20 @@ export function MemberTable({ members, duesByMember }: { members: Member[]; dues
                     <SelectItem value="waived">Waived</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+            {editing && (
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Admin Access</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Full edit/delete privileges without changing board role
+                  </p>
+                </div>
+                <Switch
+                  checked={form.isAdmin}
+                  onCheckedChange={v => field('isAdmin', v)}
+                />
               </div>
             )}
             {error && <p className="text-xs text-destructive">{error}</p>}

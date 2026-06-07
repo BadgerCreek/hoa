@@ -3,16 +3,18 @@ import { NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
 import { db } from '@/db'
 import { documents, auditLogs } from '@/db/schema'
+import { getPermissions, hasPermission } from '@/lib/permissions'
 
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 const VALID_CATEGORIES = ['minutes', 'financial', 'legal', 'maintenance', 'other'] as const
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const role = (session.user as { role?: string }).role
-  if (!role || !BOARD_ROLES.includes(role)) {
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  const perms = await getPermissions()
+  if (!hasPermission(perms['documents.manage'], userRole, userIsAdmin)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

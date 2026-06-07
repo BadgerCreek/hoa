@@ -1,9 +1,12 @@
 import { db } from '@/db'
 import { meetings, tasks } from '@/db/schema'
 import { desc, eq } from 'drizzle-orm'
+import { auth, isAdmin as checkAdmin } from '@/lib/auth'
 import { MeetingCard } from '@/components/MeetingCard'
 
 export default async function MeetingsPage() {
+  const session = await auth()
+  const isAdmin = checkAdmin(session?.user?.role, session?.user?.isAdmin)
   const allMeetings = await db.select().from(meetings).orderBy(desc(meetings.scheduledAt)).limit(20)
 
   const allTasks = allMeetings.length > 0
@@ -34,7 +37,7 @@ export default async function MeetingsPage() {
       ) : (
         <div className="space-y-3">
           {meetingsWithTasks.map(meeting => (
-            <MeetingCard key={meeting.id} meeting={meeting} />
+            <MeetingCard key={meeting.id} meeting={meeting} isAdmin={isAdmin} />
           ))}
         </div>
       )}

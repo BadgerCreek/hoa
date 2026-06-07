@@ -7,7 +7,7 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
   const session = req.auth
 
-  const BOARD_PATHS = ['/dashboard', '/agents', '/tasks', '/proposals', '/members', '/directory', '/budget', '/payments', '/arc', '/maintenance', '/meetings']
+  const BOARD_PATHS = ['/dashboard', '/agents', '/tasks', '/proposals', '/members', '/directory', '/budget', '/payments', '/arc', '/maintenance', '/meetings', '/settings']
   const isBoardPath = BOARD_PATHS.some((p) => pathname.startsWith(p))
   const isApiPath = pathname.startsWith('/api/agents') || pathname.startsWith('/api/tasks') || pathname.startsWith('/api/proposals') || pathname.startsWith('/api/arc') || pathname.startsWith('/api/payments') || pathname.startsWith('/api/members')
 

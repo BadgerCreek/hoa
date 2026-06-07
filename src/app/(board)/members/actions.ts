@@ -13,6 +13,10 @@ export async function assignRole(formData: FormData) {
   const session = await auth()
   if (!session?.user) throw new Error('Unauthorized')
 
+  const userRole = session.user.role ?? null
+  const userIsAdmin = session.user.isAdmin ?? false
+  if (userRole !== 'admin' && !userIsAdmin) throw new Error('Admin access required')
+
   const name = (formData.get('name') as string).trim()
   const email = (formData.get('email') as string).trim().toLowerCase()
   const role = formData.get('role') as string

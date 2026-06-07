@@ -1,6 +1,7 @@
 import { db } from '@/db'
 import { users, boardMembers } from '@/db/schema'
 import { eq, inArray } from 'drizzle-orm'
+import { auth, isAdmin as checkAdmin } from '@/lib/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AssignRoleForm } from '@/components/AssignRoleForm'
@@ -13,6 +14,9 @@ const BOARD_ROLES = [
 ] as const
 
 export default async function MembersPage() {
+  const session = await auth()
+  const isAdmin = checkAdmin(session?.user?.role, session?.user?.isAdmin)
+
   const members = await db
     .select({
       id: users.id,
@@ -70,14 +74,16 @@ export default async function MembersPage() {
       </div>
 
       {/* Assign form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Assign a Role</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AssignRoleForm roles={BOARD_ROLES} />
-        </CardContent>
-      </Card>
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Assign a Role</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AssignRoleForm roles={BOARD_ROLES} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

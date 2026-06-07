@@ -31,7 +31,7 @@ const categoryLabel: Record<string, string> = {
   maintenance: 'Maintenance', other: 'Other',
 }
 
-export function DocumentsClient({ docs }: { docs: Doc[] }) {
+export function DocumentsClient({ docs, isAdmin }: { docs: Doc[]; isAdmin: boolean }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState('')
@@ -81,7 +81,7 @@ export function DocumentsClient({ docs }: { docs: Doc[] }) {
   return (
     <div className="space-y-8">
       {/* Upload form */}
-      <div>
+      {isAdmin && <div>
         <h2 className="text-base font-semibold mb-3">Upload Document</h2>
         <Card>
           <CardContent className="pt-5">
@@ -134,7 +134,7 @@ export function DocumentsClient({ docs }: { docs: Doc[] }) {
             </form>
           </CardContent>
         </Card>
-      </div>
+      </div>}
 
       {/* Document list */}
       <div>
@@ -167,7 +167,7 @@ export function DocumentsClient({ docs }: { docs: Doc[] }) {
                     <span className="text-xs text-muted-foreground hidden md:block">
                       {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : ''}
                     </span>
-                    {confirmId !== doc.id ? (
+                    {isAdmin && (confirmId !== doc.id ? (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -185,7 +185,7 @@ export function DocumentsClient({ docs }: { docs: Doc[] }) {
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setConfirmId(null)}>No</Button>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               ))}
