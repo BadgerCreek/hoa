@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type TaskStatus = 'pending' | 'in_progress' | 'awaiting_human' | 'approved' | 'completed' | 'rejected'
 type TaskType = 'notification' | 'schedule_meeting' | 'phone_call' | 'get_quote' | 'request_payment' | 'request_invoice' | 'general'
@@ -90,6 +91,9 @@ export function EditTaskCard({ task, isAdmin }: Props) {
   const [notifModal, setNotifModal] = useState(false)
   const [notifTitle, setNotifTitle] = useState('')
   const [notifBody, setNotifBody] = useState('')
+  const [recipientMode, setRecipientMode] = useState<'all' | 'select'>('all')
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [members, setMembers] = useState<{ id: string; name: string | null; email: string | null }[]>([])
 
   const status = (task.status ?? 'pending') as TaskStatus
   const taskType: TaskType = (task.type && task.type !== 'general')
@@ -140,19 +144,25 @@ export function EditTaskCard({ task, isAdmin }: Props) {
     setDraftLoading(false)
   }
 
-  function openNotifModal() {
+  async function openNotifModal() {
     setNotifTitle(task.title)
     setNotifBody(task.description ?? '')
     setError('')
+    setRecipientMode('all')
+    setSelectedUserId('')
     setNotifModal(true)
+    const resp = await fetch('/api/members')
+    if (resp.ok) setMembers(await resp.json())
   }
 
   async function sendNotification() {
     setSendingNotif(true)
+    const payload: Record<string, string> = { title: notifTitle, body: notifBody }
+    if (recipientMode === 'select' && selectedUserId) payload.recipientId = selectedUserId
     const resp = await fetch(`/api/tasks/${task.id}/send-notification`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: notifTitle, body: notifBody }),
+      body: JSON.stringify(payload),
     })
     const data = await resp.json()
     setSendingNotif(false)
@@ -358,14 +368,52 @@ export function EditTaskCard({ task, isAdmin }: Props) {
                 placeholder="Write your message to residents…"
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              This will be emailed to all residents and board members and posted as an in-app notification.
-            </p>
+            <div className="space-y-2">
+              <Label>Recipients</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={recipientMode === 'all' ? 'default' : 'outline'}
+                  onClick={() => setRecipientMode('all')}
+                >
+                  All members
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={recipientMode === 'select' ? 'default' : 'outline'}
+                  onClick={() => setRecipientMode('select')}
+                >
+                  Select member
+                </Button>
+              </div>
+              {recipientMode === 'select' && (
+                <Select value={selectedUserId} onValueChange={v => setSelectedUserId(v ?? '')}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a member…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {members.map(m => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name ?? m.email ?? m.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+
+                </Select>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {recipientMode === 'all'
+                  ? 'Emailed to all members + in-app notification for everyone.'
+                  : 'Emailed to the selected member only + in-app notification for them.'}
+              </p>
+            </div>
             {error && <p className="text-xs text-destructive">{error}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNotifModal(false)} disabled={sendingNotif}>Cancel</Button>
-            <Button onClick={sendNotification} disabled={sendingNotif || !notifTitle.trim() || !notifBody.trim()}>
+            <Button onClick={sendNotification} disabled={sendingNotif || !notifTitle.trim() || !notifBody.trim() || (recipientMode === 'select' && !selectedUserId)}>
               {sendingNotif ? 'Sending…' : 'Send to Residents'}
             </Button>
           </DialogFooter>

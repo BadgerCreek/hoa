@@ -1,9 +1,29 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/db'
 import { users, properties, auditLogs } from '@/db/schema'
+import { asc } from 'drizzle-orm'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
 import { getPermissions, hasPermission } from '@/lib/permissions'
+
+const BOARD_ROLES = new Set(['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin'])
+
+export async function GET(req: Request) {
+  const session = await auth()
+  if (!session?.user) return new Response('Unauthorized', { status: 401 })
+  const role = (session.user as { role?: string }).role ?? ''
+  const isAdmin = (session.user as { isAdmin?: boolean }).isAdmin ?? false
+  if (!isAdmin && !BOARD_ROLES.has(role)) return new Response('Forbidden', { status: 403 })
+
+  const members = await db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    role: users.role,
+  }).from(users).orderBy(asc(users.name))
+
+  return Response.json(members)
+}
 
 const schema = z.object({
   name: z.string().min(1),

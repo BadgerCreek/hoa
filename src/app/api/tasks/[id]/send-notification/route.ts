@@ -29,7 +29,11 @@ export async function POST(
   const body = await req.json().catch(() => ({}))
   const subject = (body.title as string | undefined)?.trim() || task.title
   const message = (body.body as string | undefined)?.trim() || task.description || task.title
-  const residents = await db.select().from(users)
+  const recipientId = body.recipientId as string | undefined
+
+  const allUsers = await db.select().from(users)
+  const residents = recipientId ? allUsers.filter(u => u.id === recipientId) : allUsers
+  if (residents.length === 0) return NextResponse.json({ error: 'Recipient not found' }, { status: 404 })
 
   // Create in-app notifications
   if (residents.length > 0) {
