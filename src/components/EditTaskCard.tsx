@@ -30,10 +30,13 @@ const statusLabel: Record<TaskStatus, string> = {
 type TaskType = 'schedule' | 'follow_up' | 'payment' | 'general'
 
 function detectType(title: string, description: string | null): TaskType {
-  const text = `${title} ${description ?? ''}`.toLowerCase()
-  if (/schedule|meeting|calendar|set.?up meet|book a meet/.test(text)) return 'schedule'
-  if (/email|follow.?up|contact|notify|send|reach out|draft/.test(text)) return 'follow_up'
-  if (/pay|payment|invoice|check|bill|bid/.test(text)) return 'payment'
+  const t = title.toLowerCase()
+  const full = `${t} ${(description ?? '').toLowerCase()}`
+  // Schedule: only match title — descriptions often contain "meeting" as context noise
+  if (/\bschedule\b.*\bmeet|\bset.?up\b.*\bmeet|\bbook\b.*\bmeet|\borganize\b.*\bmeet/.test(t)) return 'schedule'
+  if (/\bschedule\b (a |the |next )?meeting/.test(t)) return 'schedule'
+  if (/\bemail\b|\bfollow.?up\b|\bcontact\b|\bnotif|\breach out\b|\bdraft\b/.test(full)) return 'follow_up'
+  if (/\bpay\b|\bpayment\b|\binvoice\b|\bbid\b/.test(full)) return 'payment'
   return 'general'
 }
 
