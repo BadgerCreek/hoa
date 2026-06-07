@@ -127,9 +127,11 @@ Full transcript/notes:
 ${content.slice(0, 12000)}`,
     })
     extracted = result.object
-  } catch (err) {
-    console.error('[meetings webhook] Agent extraction failed:', err)
-    return new Response('Extraction failed', { status: 500 })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : JSON.stringify(err)
+    const stack = err instanceof Error ? err.stack : ''
+    console.error('[meetings webhook] Agent extraction failed:', msg, stack)
+    return new Response(`Extraction failed: ${msg}`, { status: 500 })
   }
 
   // Find the most recently scheduled meeting (within last 48 hours)
