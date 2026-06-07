@@ -136,38 +136,45 @@ ${content.slice(0, 12000)}`,
     return new Response(`Extraction failed: ${msg}`, { status: 500 })
   }
 
-  // Find the most recently scheduled meeting (within last 48 hours)
+  const minutes = formatMinutes(extracted, event.data.subject ?? 'Board Meeting')
+  const meetingTitle = extracted.meetingTitle || event.data.subject || 'Board Meeting'
+
+  // Find a scheduled meeting within last 48h, or create one
   const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000)
-  const meeting = await db.query.meetings.findFirst({
-    where: and(
-      eq(meetings.status, 'scheduled'),
-      gte(meetings.scheduledAt, cutoff)
-    ),
+  let meeting = await db.query.meetings.findFirst({
+    where: and(eq(meetings.status, 'scheduled'), gte(meetings.scheduledAt, cutoff)),
     orderBy: desc(meetings.scheduledAt),
   })
 
-  const minutes = formatMinutes(extracted, event.data.subject ?? 'Board Meeting')
-
-  // Mark meeting completed and save minutes
   if (meeting) {
     await db.update(meetings)
-      .set({ status: 'completed', minutes })
+      .set({ status: 'completed', title: meetingTitle, minutes, transcript: content })
       .where(eq(meetings.id, meeting.id))
+  } else {
+    const [created] = await db.insert(meetings).values({
+      title: meetingTitle,
+      scheduledAt: new Date(),
+      type: 'board',
+      status: 'completed',
+      minutes,
+      transcript: content,
+    }).returning()
+    meeting = created
   }
 
-  // Create tasks for each action item
+  // Create tasks for each action item, linked to this meeting
   for (const item of extracted.actionItems) {
     const description = [
       item.description,
       item.assignedTo ? `Assigned to: ${item.assignedTo}` : null,
-      `\nFrom meeting: ${extracted.meetingTitle}`,
     ].filter(Boolean).join('\n')
 
     await db.insert(tasks).values({
       title: item.title,
       description,
       status: 'awaiting_human',
-      agentThoughts: `Extracted from Otter AI meeting notes.\n\nKey decisions:\n${extracted.decisions.map(d => `• ${d}`).join('\n')}\n\nSummary: ${extracted.summary}`,
+      meetingId: meeting.id,
+      agentThoughts: `Extracted from meeting: "${meetingTitle}"\n\nKey decisions:\n${extracted.decisions.map(d => `• ${d}`).join('\n')}\n\nSummary: ${extracted.summary}`,
       createdByAgent: 'secretary',
       assignedToAgentRole: 'secretary',
     })

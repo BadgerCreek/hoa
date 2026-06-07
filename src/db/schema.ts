@@ -108,7 +108,8 @@ export const tasks = pgTable('tasks', {
     .$type<'pending' | 'in_progress' | 'awaiting_human' | 'approved' | 'completed' | 'rejected'>()
     .default('pending'),
   assignedToUserId: text('assigned_to_user_id').references(() => users.id),
-  assignedToAgentRole: text('assigned_to_agent_role'), // 'treasurer' | 'president' | etc.
+  assignedToAgentRole: text('assigned_to_agent_role'),
+  meetingId: uuid('meeting_id'), // 'treasurer' | 'president' | etc.
   agentThoughts: text('agent_thoughts'), // transparency — what the agent was thinking
   createdByAgent: text('created_by_agent'), // e.g. 'treasurer'
   completedBy: text('completed_by').references(() => users.id),
@@ -250,6 +251,7 @@ export const meetings = pgTable('meetings', {
   type: text('type').$type<'board' | 'annual' | 'special'>().default('board'),
   agenda: text('agenda'),
   minutes: text('minutes'),
+  transcript: text('transcript'),
   minutesDocId: uuid('minutes_doc_id').references(() => documents.id),
   status: text('status').$type<'scheduled' | 'completed' | 'cancelled'>().default('scheduled'),
   createdBy: text('created_by').references(() => users.id),

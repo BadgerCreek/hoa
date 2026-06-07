@@ -1,59 +1,40 @@
 import { db } from '@/db'
-import { meetings } from '@/db/schema'
-import { desc } from 'drizzle-orm'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-
-const statusColor: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-  scheduled: 'outline',
-  completed: 'default',
-  cancelled: 'destructive',
-}
+import { meetings, tasks } from '@/db/schema'
+import { desc, eq } from 'drizzle-orm'
+import { MeetingCard } from '@/components/MeetingCard'
 
 export default async function MeetingsPage() {
   const allMeetings = await db.select().from(meetings).orderBy(desc(meetings.scheduledAt)).limit(20)
 
+  const allTasks = allMeetings.length > 0
+    ? await db.select().from(tasks).where(
+        // get all tasks that have a meetingId matching any of our meetings
+        // using a simple query since we don't have a FK relation
+        eq(tasks.createdByAgent, 'secretary')
+      ).orderBy(tasks.createdAt)
+    : []
+
+  const meetingsWithTasks = allMeetings.map(meeting => ({
+    ...meeting,
+    scheduledAt: new Date(meeting.scheduledAt),
+    tasks: allTasks.filter(t => t.meetingId === meeting.id),
+  }))
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Meetings</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Meetings</h1>
+        <p className="text-sm text-muted-foreground">{allMeetings.length} meetings</p>
+      </div>
 
-      {allMeetings.length === 0 ? (
-        <p className="text-muted-foreground">No meetings scheduled. Ask the Secretary agent to schedule one.</p>
+      {meetingsWithTasks.length === 0 ? (
+        <p className="text-muted-foreground">
+          No meetings yet. They&apos;ll appear automatically when Otter AI processes your meeting notes.
+        </p>
       ) : (
-        <div className="space-y-4">
-          {allMeetings.map(meeting => (
-            <Card key={meeting.id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-4">
-                  <CardTitle className="text-base font-medium">{meeting.title}</CardTitle>
-                  <div className="flex gap-2 shrink-0">
-                    <Badge variant="outline">{meeting.type}</Badge>
-                    <Badge variant={statusColor[meeting.status ?? 'scheduled']}>{meeting.status}</Badge>
-                  </div>
-                </div>
-                <CardDescription>
-                  {meeting.scheduledAt ? new Date(meeting.scheduledAt).toLocaleString() : '—'}
-                </CardDescription>
-              </CardHeader>
-              {(meeting.agenda || meeting.minutes) && (
-                <CardContent className="space-y-2">
-                  {meeting.agenda && (
-                    <details>
-                      <summary className="text-sm cursor-pointer text-muted-foreground hover:text-foreground">Agenda</summary>
-                      <p className="mt-2 text-sm whitespace-pre-wrap">{meeting.agenda}</p>
-                    </details>
-                  )}
-                  {meeting.minutes && (
-                    <details>
-                      <summary className="text-sm cursor-pointer text-muted-foreground hover:text-foreground">
-                        Minutes <span className="text-xs text-emerald-600 dark:text-emerald-400 ml-1">· AI processed</span>
-                      </summary>
-                      <div className="mt-2 p-3 bg-muted rounded-md text-sm whitespace-pre-wrap font-mono">{meeting.minutes}</div>
-                    </details>
-                  )}
-                </CardContent>
-              )}
-            </Card>
+        <div className="space-y-3">
+          {meetingsWithTasks.map(meeting => (
+            <MeetingCard key={meeting.id} meeting={meeting} />
           ))}
         </div>
       )}
