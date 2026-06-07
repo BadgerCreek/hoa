@@ -139,7 +139,7 @@ export function EditTaskCard({ task }: Props) {
             )}
             <div className="flex items-center gap-2 shrink-0">
               <Badge variant={statusColor[status]}>{statusLabel[status]}</Badge>
-              {!editing && status !== 'completed' && status !== 'rejected' && (
+              {!editing && status !== 'completed' && (
                 <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>Edit</Button>
               )}
             </div>
@@ -159,11 +159,16 @@ export function EditTaskCard({ task }: Props) {
                 placeholder="Description (optional)"
               />
               {error && <p className="text-xs text-destructive">{error}</p>}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button size="sm" onClick={save} disabled={saving || !title.trim()}>
                   {saving ? 'Saving…' : 'Save'}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => { setTitle(task.title); setDescription(task.description ?? ''); setEditing(false) }} disabled={saving}>
+                {status === 'rejected' && (
+                  <Button size="sm" variant="outline" onClick={approve} disabled={acting}>
+                    Re-approve
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => { setTitle(task.title); setDescription(task.description ?? ''); setEditing(false) }} disabled={saving}>
                   Cancel
                 </Button>
               </div>
