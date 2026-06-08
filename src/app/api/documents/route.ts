@@ -34,7 +34,16 @@ export async function POST(req: Request) {
   const ext = file.name.split('.').pop() ?? 'bin'
   const filename = `hoa-docs/${Date.now()}-${title.toLowerCase().replace(/\s+/g, '-')}.${ext}`
 
-  const blob = await put(filename, file, { access: 'public' })
+  let blob: Awaited<ReturnType<typeof put>>
+  try {
+    blob = await put(filename, file, {
+      access: 'public',
+      contentType: file.type || 'application/octet-stream',
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Blob upload failed'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 
   const [doc] = await db.insert(documents).values({
     title,
