@@ -9,7 +9,7 @@ const patchSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
-  role: z.enum(['resident', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']).optional(),
+  role: z.enum(['resident', 'board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']).optional(),
   isAdmin: z.boolean().optional(),
   lotNumber: z.string().optional(),
   address: z.string().optional(),

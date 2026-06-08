@@ -41,6 +41,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
 }
 
 const BOARD_ROLES = new Set([
+  'board_member',
   'board_president',
   'board_vp',
   'board_secretary',

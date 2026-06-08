@@ -12,7 +12,7 @@ import { BudgetAccordion } from '@/components/BudgetAccordion'
 import { ContactHOAButton } from '@/components/ContactHOAButton'
 import { FileText, Bell } from 'lucide-react'
 
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 
 const CURRENT_FY = 2026
 

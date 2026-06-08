@@ -10,7 +10,7 @@ export default async function BudgetPage() {
   const FISCAL_YEAR = 2025 // FY 25/26 (April 1 – March 31)
 
   const BOARD_ROLES = new Set([
-    'board_president', 'board_vp', 'board_secretary', 'board_treasurer',
+    'board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer',
   ])
   const canApprove = isAdmin || BOARD_ROLES.has(session?.user?.role ?? '')
 

@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { EditTaskCard } from '@/components/EditTaskCard'
 
 type MeetingStatus = 'scheduled' | 'completed' | 'cancelled'
@@ -37,8 +39,27 @@ const statusColor: Record<MeetingStatus, 'default' | 'secondary' | 'destructive'
 
 export function MeetingCard({ meeting, isAdmin }: { meeting: Meeting; isAdmin: boolean }) {
   const [open, setOpen] = useState(meeting.status === 'completed')
+  const [editingMinutes, setEditingMinutes] = useState(false)
+  const [minutesDraft, setMinutesDraft] = useState(meeting.minutes ?? '')
+  const [savedMinutes, setSavedMinutes] = useState(meeting.minutes ?? '')
+  const [saving, setSaving] = useState(false)
   const status = (meeting.status ?? 'scheduled') as MeetingStatus
-  const hasContent = meeting.minutes || meeting.transcript || meeting.tasks.length > 0
+  const hasContent = savedMinutes || meeting.transcript || meeting.tasks.length > 0
+
+  async function saveMinutes() {
+    setSaving(true)
+    try {
+      await fetch(`/api/meetings/${meeting.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes: minutesDraft }),
+      })
+      setSavedMinutes(minutesDraft)
+      setEditingMinutes(false)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="rounded-lg overflow-hidden">
@@ -75,9 +96,9 @@ export function MeetingCard({ meeting, isAdmin }: { meeting: Meeting; isAdmin: b
       {/* Tabbed content */}
       {open && hasContent && (
         <div className="px-4 py-4">
-          <Tabs defaultValue={meeting.minutes ? 'minutes' : meeting.tasks.length ? 'actions' : 'transcript'}>
+          <Tabs defaultValue={savedMinutes ? 'minutes' : meeting.tasks.length ? 'actions' : 'transcript'}>
             <TabsList className="mb-4">
-              {meeting.minutes && <TabsTrigger value="minutes">Minutes</TabsTrigger>}
+              {savedMinutes && <TabsTrigger value="minutes">Minutes</TabsTrigger>}
               {meeting.tasks.length > 0 && (
                 <TabsTrigger value="actions">
                   Action Items
@@ -91,13 +112,34 @@ export function MeetingCard({ meeting, isAdmin }: { meeting: Meeting; isAdmin: b
               {meeting.transcript && <TabsTrigger value="transcript">Transcript</TabsTrigger>}
             </TabsList>
 
-            {meeting.minutes && (
+            {savedMinutes && (
               <TabsContent value="minutes" className="mt-0">
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed bg-muted/30 rounded-md p-4">
-                    {meeting.minutes}
-                  </pre>
-                </div>
+                {editingMinutes ? (
+                  <div className="space-y-3">
+                    <Textarea
+                      value={minutesDraft}
+                      onChange={e => setMinutesDraft(e.target.value)}
+                      className="min-h-[400px] font-mono text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={saveMinutes} disabled={saving}>
+                        {saving ? 'Saving…' : 'Save'}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => { setMinutesDraft(savedMinutes); setEditingMinutes(false) }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed bg-muted/30 rounded-md p-4">
+                      {savedMinutes}
+                    </pre>
+                    <Button size="sm" variant="outline" onClick={() => setEditingMinutes(true)}>
+                      Edit minutes
+                    </Button>
+                  </div>
+                )}
               </TabsContent>
             )}
 

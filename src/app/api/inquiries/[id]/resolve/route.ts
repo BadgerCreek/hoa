@@ -4,7 +4,7 @@ import { db } from '@/db'
 import { inquiries } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()

@@ -7,7 +7,7 @@ import { db } from '@/db'
 import { auditLogs, agentMemory } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 const VALID_AGENT_ROLES = ['president', 'vp', 'secretary', 'treasurer'] as const
 
 export async function POST(

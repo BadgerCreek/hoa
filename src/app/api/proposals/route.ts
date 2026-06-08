@@ -3,7 +3,7 @@ import { db } from '@/db'
 import { proposals, auditLogs } from '@/db/schema'
 import { z } from 'zod'
 
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 
 const schema = z.object({
   title: z.string().min(1),

@@ -3,7 +3,7 @@ import { db } from '@/db'
 import { tasks, auditLogs } from '@/db/schema'
 import { z } from 'zod'
 
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
 
 const TASK_TYPES = ['notification', 'schedule_meeting', 'phone_call', 'get_quote', 'request_payment', 'request_invoice', 'general'] as const
 

@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
-const BOARD_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer'] as const
+const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer'] as const
 type BoardRole = typeof BOARD_ROLES[number]
 
 export async function assignRole(formData: FormData) {

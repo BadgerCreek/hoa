@@ -23,7 +23,7 @@ export const users = pgTable('users', {
   image: text('image'),
   phone: text('phone'),
   role: text('role')
-    .$type<'resident' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'admin'>()
+    .$type<'resident' | 'board_member' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'admin'>()
     .default('resident'),
   isAdmin: boolean('is_admin').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow(),

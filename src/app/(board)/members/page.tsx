@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { AssignRoleForm } from '@/components/AssignRoleForm'
 
 const BOARD_ROLES = [
+  { value: 'board_member', label: 'Board Member' },
   { value: 'board_president', label: 'President' },
   { value: 'board_vp', label: 'Vice President' },
   { value: 'board_secretary', label: 'Secretary' },
@@ -27,7 +28,7 @@ export default async function MembersPage() {
     })
     .from(users)
     .where(
-      inArray(users.role, ['board_president', 'board_vp', 'board_secretary', 'board_treasurer'])
+      inArray(users.role, ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer'])
     )
 
   const roleLabel = (role: string) =>
