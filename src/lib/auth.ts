@@ -86,6 +86,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.id = user.id
       session.user.role = user.role ?? null
       session.user.isAdmin = user.isAdmin ?? false
+      session.user.isArcMember = user.isArcMember ?? false
       return session
     },
   },

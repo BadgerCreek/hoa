@@ -20,7 +20,8 @@ export default auth((req) => {
 
   if (isBoardPath) {
     const role = (session.user as { role?: string }).role
-    if (!role || !BOARD_ROLES.includes(role)) {
+    const isArcMember = (session.user as { isArcMember?: boolean }).isArcMember
+    if (!isArcMember && (!role || !BOARD_ROLES.includes(role))) {
       return NextResponse.redirect(new URL('/portal', req.url))
     }
   }

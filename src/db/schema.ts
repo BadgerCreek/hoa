@@ -26,6 +26,7 @@ export const users = pgTable('users', {
     .$type<'resident' | 'board_member' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'board_arc' | 'admin'>()
     .default('resident'),
   isAdmin: boolean('is_admin').default(false).notNull(),
+  isArcMember: boolean('is_arc_member').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 })
 

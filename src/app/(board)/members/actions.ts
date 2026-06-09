@@ -6,6 +6,25 @@ import { eq, and } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
+export async function setArcMember(userId: string, value: boolean) {
+  const session = await auth()
+  if (!session?.user) throw new Error('Unauthorized')
+  const userIsAdmin = session.user.isAdmin ?? false
+  if (!userIsAdmin) throw new Error('Admin access required')
+
+  await db.update(users).set({ isArcMember: value }).where(eq(users.id, userId))
+
+  await db.insert(auditLogs).values({
+    action: value ? 'board.arc_added' : 'board.arc_removed',
+    entityType: 'user',
+    entityId: userId,
+    performedBy: session.user.id!,
+    details: {},
+  })
+
+  revalidatePath('/members')
+}
+
 const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'board_arc'] as const
 type BoardRole = typeof BOARD_ROLES[number]
 
