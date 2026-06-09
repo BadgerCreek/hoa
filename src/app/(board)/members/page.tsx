@@ -12,27 +12,26 @@ const BOARD_ROLES = [
   { value: 'board_vp', label: 'Vice President' },
   { value: 'board_secretary', label: 'Secretary' },
   { value: 'board_treasurer', label: 'Treasurer' },
+  { value: 'board_arc', label: 'ARC Committee' },
 ] as const
+
+const ALL_ROLES = BOARD_ROLES.map(r => r.value) as string[]
 
 export default async function MembersPage() {
   const session = await auth()
   const isAdmin = checkAdmin(session?.user?.role, session?.user?.isAdmin)
 
-  const members = await db
-    .select({
-      id: users.id,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      emailVerified: users.emailVerified,
-    })
-    .from(users)
-    .where(
-      inArray(users.role, ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer'])
-    )
+  const [members, termRecords] = await Promise.all([
+    db
+      .select({ id: users.id, name: users.name, email: users.email, role: users.role, emailVerified: users.emailVerified })
+      .from(users)
+      .where(inArray(users.role, ALL_ROLES as any)),
+    db.select({ userId: boardMembers.userId, termEnd: boardMembers.termEnd })
+      .from(boardMembers)
+      .where(eq(boardMembers.active, true)),
+  ])
 
-  const roleLabel = (role: string) =>
-    BOARD_ROLES.find((r) => r.value === role)?.label ?? role
+  const termByUserId = Object.fromEntries(termRecords.map(t => [t.userId, t.termEnd]))
 
   return (
     <div className="space-y-8">
@@ -47,6 +46,7 @@ export default async function MembersPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {BOARD_ROLES.map(({ value, label }) => {
           const member = members.find((m) => m.role === value)
+          const termEnd = member ? termByUserId[member.id] : null
           return (
             <Card key={value} className={!member ? 'border-dashed opacity-60' : ''}>
               <CardHeader className="pb-2">
@@ -64,6 +64,11 @@ export default async function MembersPage() {
                   <div className="text-sm space-y-0.5">
                     <p className="font-medium">{member.name ?? '(name not set)'}</p>
                     <p className="text-muted-foreground">{member.email}</p>
+                    {termEnd && (
+                      <p className="text-xs text-muted-foreground">
+                        Term expires: {new Date(termEnd).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Unassigned</p>

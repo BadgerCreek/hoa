@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -43,19 +43,34 @@ export function MeetingCard({ meeting, isAdmin }: { meeting: Meeting; isAdmin: b
   const [minutesDraft, setMinutesDraft] = useState(meeting.minutes ?? '')
   const [savedMinutes, setSavedMinutes] = useState(meeting.minutes ?? '')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setSavedMinutes(meeting.minutes ?? '')
+    if (!editingMinutes) {
+      setMinutesDraft(meeting.minutes ?? '')
+    }
+  }, [meeting.minutes])
   const status = (meeting.status ?? 'scheduled') as MeetingStatus
   const hasContent = savedMinutes || meeting.transcript || meeting.tasks.length > 0
 
   async function saveMinutes() {
     setSaving(true)
+    setSaveError(null)
     try {
-      await fetch(`/api/meetings/${meeting.id}`, {
+      const res = await fetch(`/api/meetings/${meeting.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ minutes: minutesDraft }),
       })
+      if (!res.ok) {
+        setSaveError(`Save failed (${res.status}). Try again.`)
+        return
+      }
       setSavedMinutes(minutesDraft)
       setEditingMinutes(false)
+    } catch {
+      setSaveError('Network error. Check your connection and try again.')
     } finally {
       setSaving(false)
     }
@@ -121,13 +136,18 @@ export function MeetingCard({ meeting, isAdmin }: { meeting: Meeting; isAdmin: b
                       onChange={e => setMinutesDraft(e.target.value)}
                       className="min-h-[400px] font-mono text-sm"
                     />
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={saveMinutes} disabled={saving}>
-                        {saving ? 'Saving…' : 'Save'}
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => { setMinutesDraft(savedMinutes); setEditingMinutes(false) }}>
-                        Cancel
-                      </Button>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={saveMinutes} disabled={saving}>
+                          {saving ? 'Saving…' : 'Save'}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setMinutesDraft(savedMinutes); setEditingMinutes(false); setSaveError(null) }}>
+                          Cancel
+                        </Button>
+                      </div>
+                      {saveError && (
+                        <p className="text-sm text-destructive">{saveError}</p>
+                      )}
                     </div>
                   </div>
                 ) : (

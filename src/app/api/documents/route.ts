@@ -2,7 +2,8 @@ import { auth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { put } from '@vercel/blob'
 import { db } from '@/db'
-import { documents, auditLogs } from '@/db/schema'
+import { documents, auditLogs, documentFolders } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { getPermissions, hasPermission } from '@/lib/permissions'
 
 const VALID_CATEGORIES = ['minutes', 'financial', 'legal', 'maintenance', 'other'] as const
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
   const file = form.get('file') as File | null
   const title = (form.get('title') as string | null)?.trim()
   const category = form.get('category') as string | null
+  const folderIdRaw = (form.get('folderId') as string | null)?.trim() || null
 
   if (!file || !title) {
     return NextResponse.json({ error: 'File and title are required.' }, { status: 400 })
@@ -45,10 +47,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 
+  // Validate folderId exists if provided
+  let folderId: string | null = null
+  if (folderIdRaw) {
+    const folder = await db.select({ id: documentFolders.id }).from(documentFolders).where(eq(documentFolders.id, folderIdRaw)).limit(1)
+    if (folder.length === 0) return NextResponse.json({ error: 'Folder not found.' }, { status: 400 })
+    folderId = folderIdRaw
+  }
+
   const [doc] = await db.insert(documents).values({
     title,
     fileUrl: blob.url,
     category: validCategory,
+    folderId,
     uploadedBy: session.user.id,
   }).returning()
 

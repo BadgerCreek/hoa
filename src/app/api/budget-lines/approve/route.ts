@@ -8,6 +8,7 @@ const BOARD_ROLES = new Set([
   'board_vp',
   'board_secretary',
   'board_treasurer',
+  'board_arc',
 ])
 
 export async function POST(req: Request) {

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 
-type Role = 'resident' | 'board_member' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'admin'
+type Role = 'resident' | 'board_member' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'board_arc' | 'admin'
 
 interface Member {
   id: string
@@ -42,6 +42,7 @@ const roleLabel: Record<string, string> = {
   board_vp: 'Vice President',
   board_secretary: 'Secretary',
   board_treasurer: 'Treasurer',
+  board_arc: 'ARC Committee',
   admin: 'Admin',
 }
 

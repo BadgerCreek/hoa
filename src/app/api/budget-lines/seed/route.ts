@@ -3,7 +3,7 @@ import { db } from '@/db'
 import { budgetLineItems } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 
-const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'board_arc', 'admin']
 
 const FY2526 = [
   // Income

@@ -1,6 +1,6 @@
 import { db } from '@/db'
-import { users } from '@/db/schema'
-import { inArray } from 'drizzle-orm'
+import { users, boardMembers } from '@/db/schema'
+import { inArray, eq } from 'drizzle-orm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 
@@ -10,19 +10,27 @@ const ROLE_LABELS: Record<string, string> = {
   board_secretary: 'Secretary',
   board_treasurer: 'Treasurer',
   board_member: 'Board Member',
+  board_arc: 'ARC Committee',
 }
 
-const ROLE_ORDER = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'board_member']
+const ROLE_ORDER = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'board_member', 'board_arc']
 
 export default async function BoardMembersPage() {
-  const members = await db
-    .select({ name: users.name, email: users.email, role: users.role })
-    .from(users)
-    .where(inArray(users.role, ROLE_ORDER as any))
+  const [members, termRecords] = await Promise.all([
+    db
+      .select({ name: users.name, email: users.email, role: users.role, id: users.id })
+      .from(users)
+      .where(inArray(users.role, ROLE_ORDER as any)),
+    db.select({ userId: boardMembers.userId, termEnd: boardMembers.termEnd })
+      .from(boardMembers)
+      .where(eq(boardMembers.active, true)),
+  ])
+
+  const termByUserId = Object.fromEntries(termRecords.map(t => [t.userId, t.termEnd]))
 
   const OFFICER_ROLES = ['board_president', 'board_vp', 'board_secretary', 'board_treasurer']
   const officers = OFFICER_ROLES.map((role) => ({ role, member: members.find((m) => m.role === role) }))
-  const atLargeMembers = members.filter((m) => m.role === 'board_member')
+  const atLargeMembers = members.filter((m) => m.role === 'board_member' || m.role === 'board_arc')
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,6 +59,11 @@ export default async function BoardMembersPage() {
                   <div>
                     <p className="font-medium">{member.name ?? 'TBD'}</p>
                     <p className="text-sm text-muted-foreground">{member.email}</p>
+                    {termByUserId[member.id] && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Term expires: {new Date(termByUserId[member.id]!).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Vacant</p>
@@ -62,12 +75,17 @@ export default async function BoardMembersPage() {
             <Card key={member.email}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Board Member
+                  {ROLE_LABELS[member.role ?? ''] ?? 'Board Member'}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="font-medium">{member.name ?? 'TBD'}</p>
                 <p className="text-sm text-muted-foreground">{member.email}</p>
+                {termByUserId[member.id] && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Term expires: {new Date(termByUserId[member.id]!).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </p>
+                )}
               </CardContent>
             </Card>
           ))}

@@ -23,7 +23,7 @@ export const users = pgTable('users', {
   image: text('image'),
   phone: text('phone'),
   role: text('role')
-    .$type<'resident' | 'board_member' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'admin'>()
+    .$type<'resident' | 'board_member' | 'board_president' | 'board_vp' | 'board_secretary' | 'board_treasurer' | 'board_arc' | 'admin'>()
     .default('resident'),
   isAdmin: boolean('is_admin').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -147,6 +147,16 @@ export const votes = pgTable(
   (t) => [index('votes_proposal_voter_idx').on(t.proposalId, t.voterId)]
 )
 
+// ─── Document Folders ────────────────────────────────────────────────────────
+
+export const documentFolders = pgTable('document_folders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  visibleToResidents: boolean('visible_to_residents').default(false).notNull(),
+  createdBy: text('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
 // ─── Documents ───────────────────────────────────────────────────────────────
 
 export const documents = pgTable('documents', {
@@ -154,6 +164,7 @@ export const documents = pgTable('documents', {
   title: text('title').notNull(),
   fileUrl: text('file_url').notNull(), // Vercel Blob signed URL
   category: text('category').$type<'minutes' | 'financial' | 'legal' | 'maintenance' | 'other'>(),
+  folderId: uuid('folder_id').references(() => documentFolders.id, { onDelete: 'set null' }),
   uploadedBy: text('uploaded_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
 })
@@ -364,8 +375,14 @@ export const maintenanceRequestsRelations = relations(maintenanceRequests, ({ on
   submitter: one(users, { fields: [maintenanceRequests.submittedBy], references: [users.id] }),
 }))
 
+export const documentFoldersRelations = relations(documentFolders, ({ one, many }) => ({
+  creator: one(users, { fields: [documentFolders.createdBy], references: [users.id] }),
+  documents: many(documents),
+}))
+
 export const documentsRelations = relations(documents, ({ one }) => ({
   uploader: one(users, { fields: [documents.uploadedBy], references: [users.id] }),
+  folder: one(documentFolders, { fields: [documents.folderId], references: [documentFolders.id] }),
 }))
 
 export const arcApplicationsRelations = relations(arcApplications, ({ one }) => ({

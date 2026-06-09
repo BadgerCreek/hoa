@@ -57,6 +57,18 @@ export function AssignRoleForm({ roles }: { roles: readonly Role[] }) {
         />
       </div>
 
+      <div className="space-y-1">
+        <label className="text-sm font-medium">
+          Term Expires{' '}
+          <span className="font-normal text-muted-foreground">(optional)</span>
+        </label>
+        <input
+          name="termEnd"
+          type="date"
+          className="w-full rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       <Button type="submit" disabled={pending}>

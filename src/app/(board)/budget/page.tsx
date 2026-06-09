@@ -11,6 +11,7 @@ export default async function BudgetPage() {
 
   const BOARD_ROLES = new Set([
     'board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer',
+  'board_arc',
   ])
   const canApprove = isAdmin || BOARD_ROLES.has(session?.user?.role ?? '')
 

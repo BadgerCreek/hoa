@@ -6,6 +6,6 @@ export default async function HomePage() {
   if (!session) redirect('/login')
 
   const role = (session.user as { role?: string }).role
-  const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+  const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'board_arc', 'admin']
   redirect(role && BOARD_ROLES.includes(role) ? '/dashboard' : '/portal')
 }

@@ -6,7 +6,8 @@ import { z } from 'zod'
 import { randomUUID } from 'crypto'
 import { getPermissions, hasPermission } from '@/lib/permissions'
 
-const BOARD_ROLES = new Set(['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin'])
+const BOARD_ROLES = new Set(['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer',
+  'board_arc', 'admin'])
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -29,7 +30,8 @@ const schema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   phone: z.string().optional(),
-  role: z.enum(['resident', 'board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']).default('resident'),
+  role: z.enum(['resident', 'board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer',
+  'board_arc', 'admin']).default('resident'),
   lotNumber: z.string().optional(),
   address: z.string().optional(),
 })

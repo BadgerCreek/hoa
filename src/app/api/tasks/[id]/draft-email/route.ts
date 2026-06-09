@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import { generateText } from 'ai'
 import { VeniceModel } from '@/lib/venice'
 
-const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'board_arc', 'admin']
 
 export async function POST(
   req: Request,

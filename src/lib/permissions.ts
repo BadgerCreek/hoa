@@ -46,6 +46,7 @@ const BOARD_ROLES = new Set([
   'board_vp',
   'board_secretary',
   'board_treasurer',
+  'board_arc',
 ])
 
 // Module-level cache — one entry per cold start, expires after 60s

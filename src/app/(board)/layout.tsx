@@ -7,7 +7,7 @@ export default async function BoardLayout({ children }: { children: React.ReactN
   if (!session) redirect('/login')
 
   const role = (session.user as { role?: string }).role
-  const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'admin']
+  const BOARD_ROLES = ['board_member', 'board_president', 'board_vp', 'board_secretary', 'board_treasurer', 'board_arc', 'admin']
   if (!role || !BOARD_ROLES.includes(role)) redirect('/portal')
 
   const name = session.user?.name ?? ''
