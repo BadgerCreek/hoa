@@ -15,8 +15,8 @@ export async function POST(
 
   const userRole = session.user.role ?? null
   const userIsAdmin = session.user.isAdmin ?? false
-  if (userRole !== 'board_treasurer' && !userIsAdmin) {
-    return new Response('Only the treasurer can reject payments', { status: 403 })
+  if (userRole !== 'board_president' && !userIsAdmin) {
+    return new Response('Only the president can reject payments', { status: 403 })
   }
 
   const { id } = await params

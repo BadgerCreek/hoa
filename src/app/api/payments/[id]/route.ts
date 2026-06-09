@@ -11,6 +11,7 @@ const schema = z.object({
   amount: z.number().positive().optional(),
   vendor: z.string().optional(),
   category: z.enum(['maintenance', 'utilities', 'administrative', 'landscaping', 'insurance', 'other']).optional(),
+  invoiceUrl: z.string().url().optional().nullable(),
 })
 
 export async function PATCH(

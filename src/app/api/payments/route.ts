@@ -12,6 +12,7 @@ const schema = z.object({
   amount: z.number().positive(),
   vendor: z.string().optional(),
   category: z.enum(['maintenance', 'utilities', 'administrative', 'landscaping', 'insurance', 'other']).default('other'),
+  invoiceUrl: z.string().url().optional(),
 })
 
 export async function POST(req: Request) {

@@ -133,7 +133,7 @@ Residents vote yes/no/abstain on `open` proposals. Vote tally live.
 pending → [Treasurer Approve] → approved + transaction created
        → [Treasurer Reject]  → rejected (with reason)
 ```
-Only `board_treasurer` and `admin` can approve/reject payments.
+Only `board_president` and `admin` can approve/reject payments.
 
 ### ARC Application Flow
 ```

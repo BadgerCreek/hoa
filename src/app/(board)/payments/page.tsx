@@ -16,11 +16,46 @@ function fmt(val: string | null) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(val))
 }
 
+function isImageUrl(url: string) {
+  return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url)
+}
+
+function InvoiceThumbnail({ url }: { url: string }) {
+  if (isImageUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+        <img
+          src={url}
+          alt="Invoice"
+          className="h-14 w-14 object-cover rounded border hover:opacity-80 transition-opacity"
+        />
+      </a>
+    )
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="shrink-0 flex flex-col items-center justify-center h-14 w-14 rounded border bg-muted hover:bg-muted/70 transition-colors gap-0.5"
+      title="View invoice"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+      <span className="text-[10px] text-muted-foreground font-medium">PDF</span>
+    </a>
+  )
+}
+
 export default async function PaymentsPage() {
   const session = await auth()
   const userRole = session?.user?.role ?? ''
   const userIsAdmin = session?.user?.isAdmin ?? false
-  const isTreasurer = userRole === 'board_treasurer' || checkAdmin(userRole, userIsAdmin)
+  const isTreasurer = userRole === 'board_president' || checkAdmin(userRole, userIsAdmin)
   const isAdmin = checkAdmin(userRole, userIsAdmin)
 
   const allPayments = await db.query.payments.findMany({
@@ -37,7 +72,7 @@ export default async function PaymentsPage() {
         <div>
           <h1 className="text-2xl font-bold">Payments</h1>
           {pendingCount > 0 && (
-            <p className="text-sm text-amber-500 mt-1">{pendingCount} pending treasurer approval</p>
+            <p className="text-sm text-amber-500 mt-1">{pendingCount} pending president approval</p>
           )}
         </div>
         <PaymentsClient isTreasurer={isTreasurer} mode="add-button" />
@@ -67,7 +102,8 @@ export default async function PaymentsPage() {
                     {p.rejectionReason && ` · "${p.rejectionReason}"`}
                   </p>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="flex items-start gap-3 shrink-0">
+                  {p.invoiceUrl && <InvoiceThumbnail url={p.invoiceUrl} />}
                   <p className="text-lg font-semibold">{fmt(p.amount)}</p>
                 </div>
               </div>
@@ -77,7 +113,14 @@ export default async function PaymentsPage() {
                   isAdmin={isAdmin}
                   mode="actions"
                   paymentId={p.id}
-                  payment={{ title: p.title, description: p.description ?? '', amount: Number(p.amount), vendor: p.vendor ?? '', category: (p.category ?? 'other') as never }}
+                  payment={{
+                    title: p.title,
+                    description: p.description ?? '',
+                    amount: Number(p.amount),
+                    vendor: p.vendor ?? '',
+                    category: (p.category ?? 'other') as never,
+                    invoiceUrl: p.invoiceUrl,
+                  }}
                 />
               )}
             </div>

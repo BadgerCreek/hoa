@@ -1,6 +1,6 @@
 import { db } from '@/db'
 import { documents, documentFolders } from '@/db/schema'
-import { desc, isNull } from 'drizzle-orm'
+import { asc, desc, isNull } from 'drizzle-orm'
 import { auth, isAdmin as checkAdmin } from '@/lib/auth'
 import { DocumentsClient } from '@/components/DocumentsClient'
 
@@ -10,7 +10,7 @@ export default async function DocumentsPage() {
 
   const [folders, unfiledRaw] = await Promise.all([
     db.query.documentFolders.findMany({
-      orderBy: desc(documentFolders.createdAt),
+      orderBy: asc(documentFolders.sortOrder),
       with: {
         documents: {
           orderBy: desc(documents.createdAt),
@@ -44,6 +44,7 @@ export default async function DocumentsPage() {
           id: f.id,
           name: f.name,
           visibleToResidents: f.visibleToResidents,
+          sortOrder: f.sortOrder,
           documents: f.documents.map(mapDoc),
         }))}
         unfiledDocs={unfiledRaw.map(mapDoc)}

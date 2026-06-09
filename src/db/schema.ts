@@ -154,6 +154,7 @@ export const documentFolders = pgTable('document_folders', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   visibleToResidents: boolean('visible_to_residents').default(false).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
   createdBy: text('created_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
 })
@@ -222,6 +223,7 @@ export const payments = pgTable('payments', {
   budgetId: uuid('budget_id').references(() => budgets.id),
   transactionId: uuid('transaction_id').references(() => transactions.id),
   rejectionReason: text('rejection_reason'),
+  invoiceUrl: text('invoice_url'),
   approvedAt: timestamp('approved_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

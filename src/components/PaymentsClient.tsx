@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,14 +31,17 @@ interface ActionsProps {
   isAdmin: boolean
   mode: 'actions'
   paymentId: string
-  payment: Omit<PaymentForm, 'amount'> & { amount: number }
+  payment: Omit<PaymentForm, 'amount'> & { amount: number; invoiceUrl?: string | null }
 }
 type Props = AddButtonProps | ActionsProps
 
 export function PaymentsClient(props: Props) {
   const router = useRouter()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<PaymentForm>(emptyForm)
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [rejectOpen, setRejectOpen] = useState(false)
@@ -51,6 +54,8 @@ export function PaymentsClient(props: Props) {
 
   function openRequest() {
     setForm(emptyForm)
+    setInvoiceFile(null)
+    setInvoiceUrl(null)
     setError('')
     setOpen(true)
   }
@@ -64,6 +69,8 @@ export function PaymentsClient(props: Props) {
       vendor: props.payment.vendor,
       category: props.payment.category,
     })
+    setInvoiceFile(null)
+    setInvoiceUrl(props.payment.invoiceUrl ?? null)
     setError('')
     setOpen(true)
   }
@@ -81,17 +88,33 @@ export function PaymentsClient(props: Props) {
     setSaving(true)
     setError('')
 
+    let uploadedUrl: string | null = invoiceUrl
+
+    if (invoiceFile) {
+      const fd = new FormData()
+      fd.append('file', invoiceFile)
+      const upResp = await fetch('/api/payments/invoice', { method: 'POST', body: fd })
+      if (!upResp.ok) {
+        setError('Invoice upload failed')
+        setSaving(false)
+        return
+      }
+      const { url } = await upResp.json()
+      uploadedUrl = url
+    }
+
     const isEdit = props.mode === 'actions'
+    const body = { ...form, amount, ...(uploadedUrl ? { invoiceUrl: uploadedUrl } : {}) }
     const resp = isEdit
       ? await fetch(`/api/payments/${props.paymentId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, amount }),
+          body: JSON.stringify(body),
         })
       : await fetch('/api/payments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, amount }),
+          body: JSON.stringify(body),
         })
 
     setSaving(false)
@@ -126,7 +149,15 @@ export function PaymentsClient(props: Props) {
     return (
       <>
         <Button size="sm" onClick={openRequest}>Request Payment</Button>
-        <PaymentFormDialog open={open} onOpenChange={setOpen} form={form} field={field} saving={saving} error={error} onSave={saveRequest} title="Request Payment" />
+        <PaymentFormDialog
+          open={open} onOpenChange={setOpen}
+          form={form} field={field}
+          invoiceFile={invoiceFile} invoiceUrl={invoiceUrl}
+          onFileChange={f => setInvoiceFile(f)}
+          onClearInvoice={() => { setInvoiceFile(null); setInvoiceUrl(null) }}
+          fileRef={fileRef}
+          saving={saving} error={error} onSave={saveRequest} title="Request Payment"
+        />
       </>
     )
   }
@@ -143,7 +174,15 @@ export function PaymentsClient(props: Props) {
         )}
       </div>
 
-      <PaymentFormDialog open={open} onOpenChange={setOpen} form={form} field={field} saving={saving} error={error} onSave={saveRequest} title="Edit Payment" />
+      <PaymentFormDialog
+        open={open} onOpenChange={setOpen}
+        form={form} field={field}
+        invoiceFile={invoiceFile} invoiceUrl={invoiceUrl}
+        onFileChange={f => setInvoiceFile(f)}
+        onClearInvoice={() => { setInvoiceFile(null); setInvoiceUrl(null) }}
+        fileRef={fileRef}
+        saving={saving} error={error} onSave={saveRequest} title="Edit Payment"
+      />
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -162,16 +201,31 @@ export function PaymentsClient(props: Props) {
   )
 }
 
-function PaymentFormDialog({ open, onOpenChange, form, field, saving, error, onSave, title }: {
+function PaymentFormDialog({ open, onOpenChange, form, field, invoiceFile, invoiceUrl, onFileChange, onClearInvoice, fileRef, saving, error, onSave, title }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   form: PaymentForm
   field: (k: keyof PaymentForm, v: string) => void
+  invoiceFile: File | null
+  invoiceUrl: string | null
+  onFileChange: (f: File | null) => void
+  onClearInvoice: () => void
+  fileRef: React.RefObject<HTMLInputElement | null>
   saving: boolean
   error: string
   onSave: () => void
   title: string
 }) {
+  const isImage = (url: string) => /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url)
+
+  const previewSrc = invoiceFile
+    ? URL.createObjectURL(invoiceFile)
+    : invoiceUrl ?? null
+
+  const previewIsImage = invoiceFile
+    ? invoiceFile.type.startsWith('image/')
+    : (invoiceUrl ? isImage(invoiceUrl) : false)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -206,6 +260,37 @@ function PaymentFormDialog({ open, onOpenChange, form, field, saving, error, onS
             <Label>Description</Label>
             <Input value={form.description} onChange={e => field('description', e.target.value)} placeholder="Additional details…" />
           </div>
+
+          <div className="space-y-1.5">
+            <Label>Invoice</Label>
+            {previewSrc ? (
+              <div className="flex items-center gap-3">
+                {previewIsImage ? (
+                  <a href={previewSrc} target="_blank" rel="noopener noreferrer">
+                    <img src={previewSrc} alt="Invoice preview" className="h-16 w-16 object-cover rounded border" />
+                  </a>
+                ) : (
+                  <a href={previewSrc} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+                    <PdfIcon />
+                    {invoiceFile ? invoiceFile.name : 'View invoice'}
+                  </a>
+                )}
+                <Button type="button" size="sm" variant="ghost" onClick={onClearInvoice} className="text-muted-foreground">Remove</Button>
+              </div>
+            ) : (
+              <>
+                <Input
+                  ref={fileRef as React.RefObject<HTMLInputElement>}
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="cursor-pointer"
+                  onChange={e => onFileChange(e.target.files?.[0] ?? null)}
+                />
+                <p className="text-xs text-muted-foreground">Images or PDF</p>
+              </>
+            )}
+          </div>
+
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <DialogFooter>
@@ -214,5 +299,17 @@ function PaymentFormDialog({ open, onOpenChange, form, field, saving, error, onS
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+function PdfIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
   )
 }
